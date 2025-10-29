@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coder 1</title>
+<style>
+:root {
+--background-color: #1e1e1e;
+--text-color: #d4d4d4;
+--line-number-color: #858585;
+--textarea-background: #252526;
+--button-background: #3a3d41;
+--button-hover-background: #4a4d51;
+}
+html,
+body {
+height: 100%;
+margin: 0;
+padding: 0;
+}
+body {
+background-color: var(--background-color);
+color: var(--text-color);
+font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+.controls {
+position: relative;
+top: 0;
+z-index: 1000;
+padding: 8px;
+background-color: var(--background-color);
+display: flex;
+gap: 10px;
+justify-content: flex-start;
+align-items: center;
+border-bottom: 1px solid #333;
+flex-shrink: 0;
+}
+.editor-container {
+flex: 1;
+display: flex;
+overflow: hidden;
+}
+#line-numbers {
+background-color: var(--background-color);
+color: var(--line-number-color);
+padding: 15px 10px 15px 15px;
+text-align: right;
+font-size: 14px;
+line-height: 1.5;
+user-select: none;
+border-right: 1px solid var(--line-number-color);
+overflow: hidden;
+}
+textarea {
+flex-grow: 1;
+background-color: var(--textarea-background);
+color: var(--text-color);
+border: none;
+outline: none;
+padding: 15px;
+font-size: 14px;
+line-height: 1.5;
+resize: none;
+caret-color: white;
+white-space: pre;
+overflow-wrap: normal;
+overflow-x: auto;
+}
+::selection {
+background-color: #264f78;
+}
+button {
+background-color: var(--button-background);
+color: var(--text-color);
+border: 0;
+padding: 5px 10px;
+cursor: pointer;
+border-radius: 3px;
+font-family: inherit;
+font-size: 16px;
+}
+button:hover {
+background-color: var(--button-hover-background);
+}
+#file-input {
+display: none;
+}
+.search-container {
+margin: 0 auto;
+display: flex;
+align-items: center;
+gap: 5px;
+}
+#find-input {
+background-color: var(--textarea-background);
+color: var(--text-color);
+border: 1px solid var(--button-background);
+padding: 3px 6px;
+border-radius: 3px;
+font-family: inherit;
+width: 150px;
+}
+.search-container button {
+padding: 3px 8px;
+font-size: 14px;
+line-height: 1;
+}
+#match-status {
+font-size: 12px;
+color: var(--line-number-color);
+min-width: 50px;
+text-align: center;
+}
+.align-right {
+margin-left: auto;
+}
+#color-picker-container {
+position: absolute;
+top: 100%;
+right: 8px;
+width: 250px;
+display: none;
+background-color: var(--background-color);
+border: 1px solid #444;
+border-top: none;
+border-radius: 0 0 5px 5px;
+padding: 10px;
+box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+z-index: 999;
+max-height: 50vh;
+overflow-y: auto;
+}
+#color-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(20px, 1fr));
+gap: 5px;
+}
+.color-box {
+width: 20px;
+height: 20px;
+cursor: pointer;
+border: 1px solid #333;
+}
+#color-copied-message {
+position: fixed;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+background-color: rgba(0, 0, 0, 0.7);
+color: white;
+padding: 10px 20px;
+border-radius: 5px;
+z-index: 1001;
+display: none;
+text-align: center;
+font-size: 14px;
+}
+</style>
+</head>
+<body>
+<div class="controls">
+<button id="quick-save-button" title="Quick Save (overwrite)" aria-label="Quick Save (overwrite)"
+style="display: none;">⚡</button>
+<button id="open-button" title="Open (Ctrl+O)" aria-label="Open File">🔻</button>
+<button id="save-button" title="Export (Ctrl+S)" aria-label="Export File">🔺</button>
+<button id="new-window-button" title="New Tab" aria-label="Open New Tab">➕</button>
+<input type="file" id="file-input" />
+<div class="search-container">
+<input type="text" id="find-input" placeholder="Search (Ctrl+F)...">
+<button id="prev-match" title="Previous">▲</button>
+<button id="next-match" title="Next">▼</button>
+<span id="match-status"></span>
+</div>
+<button id="preview-button" class="align-right" title="Preview in New Tab"
+aria-label="Preview in New Tab">✨</button>
+<button id="color-picker-button" title="Color Picker" aria-label="Show Color Picker">🎨</button>
+<div id="color-picker-container"></div>
+</div>
+<div class="editor-container">
+<div id="line-numbers">1</div>
+<textarea id="editor" spellcheck="false" wrap="off" autofocus></textarea>
+</div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+'use strict';
+const editor = document.getElementById('editor');
+const lineNumbers = document.getElementById('line-numbers');
+const fileInput = document.getElementById('file-input');
+const quickSaveButton = document.getElementById('quick-save-button');
+const openButton = document.getElementById('open-button');
+const saveButton = document.getElementById('save-button');
+const newWindowButton = document.getElementById('new-window-button');
+const previewButton = document.getElementById('preview-button');
+const colorPickerButton = document.getElementById('color-picker-button');
+const colorPickerContainer = document.getElementById('color-picker-container');
+const findInput = document.getElementById('find-input');
+const nextMatchBtn = document.getElementById('next-match');
+const prevMatchBtn = document.getElementById('prev-match');
+const matchStatus = document.getElementById('match-status');
+const TAB_CHAR = '  ';
+const DEFAULT_FILE_NAME = 'document.html';
+const APP_TITLE = 'Coder';
+const computedEditorStyle = getComputedStyle(editor);
+const EDITOR_LINE_HEIGHT = parseFloat(computedEditorStyle.lineHeight) || 21;
+let hasUnsavedChanges = false;
+let currentFileName = DEFAULT_FILE_NAME;
+let currentLineCount = 0;
+let currentFileHandle = null;
+let matches = [];
+let currentMatchIndex = -1;
+const webColors = [
+'#000000', '#000080', '#00008b', '#0000cd', '#0000ff', '#006400', '#008000', '#008080', '#008b8b', '#00bfff', '#00ced1',
+'#00fa9a', '#00ff7f', '#00ff00', '#00ffff', '#191970', '#1e90ff', '#20b2aa', '#228b22', '#2f4f4f', '#32cd32', '#3cb371',
+'#40e0d0', '#4169e1', '#4682b4', '#483d8b', '#48d1cc', '#4b0082', '#556b2f', '#5f9ea0', '#6495ed', '#66cdaa', '#696969',
+'#6a5acd', '#6b8e23', '#708090', '#778899', '#7b68ee', '#7cfc00', '#7fff00', '#7fffd4', '#800000', '#800080', '#808000',
+'#808080', '#87ceeb', '#87cefa', '#8a2be2', '#8b0000', '#8b008b', '#8b4513', '#8fbc8f', '#90ee90', '#9370db', '#9400d3',
+'#98fb98', '#9932cc', '#9acd32', '#a0522d', '#a52a2a', '#a9a9a9', '#add8e6', '#adff2f', '#afeeee', '#b0c4de', '#b0e0e6',
+'#b22222', '#b8860b', '#ba55d3', '#bc8f8f', '#bdb76b', '#c0c0c0', '#c71585', '#cd5c5c', '#cd853f', '#d2691e', '#d2b48c',
+'#d3d3d3', '#d8bfd8', '#da70d6', '#daa520', '#db7093', '#dc143c', '#dcdcdc', '#e0ffff', '#e6e6fa', '#e9967a', '#ee82ee',
+'#eee8aa', '#f08080', '#f0e68c', '#f0f8ff', '#f0fff0', '#f0ffff', '#f4a460', '#f5deb3', '#f5f5dc', '#f5f5f5', '#f5fffa',
+'#f8f8ff', '#fa8072', '#faebd7', '#faf0e6', '#fafad2', '#fdf5e6', '#ff0000', '#ff00ff', '#ff1493', '#ff4500', '#ff6347',
+'#ff69b4', '#ff7f50', '#ff8c00', '#ffa07a', '#ffa500', '#ffb6c1', '#ffc0cb', '#ffd700', '#ffdab9', '#ffefd5', '#fff0f5',
+'#fff5ee', '#fff8dc', '#fffacd', '#fffae0', '#fffaf0', '#ffffe0', '#ffff00', '#ffffff'
+];
+const messageDiv = document.createElement('div');
+messageDiv.id = 'color-copied-message';
+document.body.appendChild(messageDiv);
+function generateColorGrid() {
+const colorGrid = document.createElement('div');
+colorGrid.id = 'color-grid';
+webColors.forEach(color => {
+const colorBox = document.createElement('div');
+colorBox.className = 'color-box';
+colorBox.style.backgroundColor = color;
+colorBox.title = color;
+colorBox.addEventListener('click', () => {
+copyToClipboard(color);
+});
+colorGrid.appendChild(colorBox);
+});
+colorPickerContainer.appendChild(colorGrid);
+}
+async function copyToClipboard(text) {
+try {
+await navigator.clipboard.writeText(text);
+showCopyMessage(text);
+} catch (err) {
+console.error('Copying color error:', err);
+alert(`Could not copy color: ${text}`);
+}
+}
+function showCopyMessage(colorCode) {
+messageDiv.textContent = `Color code ${colorCode} copied!`;
+messageDiv.style.display = 'block';
+setTimeout(() => {
+messageDiv.style.display = 'none';
+}, 2000);
+}
+function findMatches() {
+const query = findInput.value;
+const content = editor.value;
+matches = [];
+currentMatchIndex = -1;
+if (query === "") {
+matchStatus.textContent = "";
+editor.setSelectionRange(editor.selectionStart, editor.selectionStart);
+return;
+}
+let lastIndex = 0;
+while ((lastIndex = content.toLowerCase().indexOf(query.toLowerCase(), lastIndex)) !== -1) {
+matches.push(lastIndex);
+lastIndex += query.length;
+}
+if (matches.length > 0) {
+currentMatchIndex = 0;
+}
+updateStatus();
+}
+function highlightCurrentMatch() {
+if (currentMatchIndex === -1) return;
+const matchPos = matches[currentMatchIndex];
+const endPos = matchPos + findInput.value.length;
+editor.focus();
+editor.setSelectionRange(matchPos, endPos);
+const textUpToMatch = editor.value.substring(0, matchPos);
+const lineNumber = textUpToMatch.split('\n').length - 1;
+const desiredScrollTop = (lineNumber * EDITOR_LINE_HEIGHT) - (editor.clientHeight / 2);
+editor.scrollTop = desiredScrollTop;
+}
+function updateStatus() {
+if (matches.length > 0) {
+matchStatus.textContent = `${currentMatchIndex + 1} / ${matches.length}`;
+} else if (findInput.value !== "") {
+matchStatus.textContent = "0 results";
+} else {
+matchStatus.textContent = "";
+}
+}
+function showPreview() {
+const code = editor.value;
+const previewWindow = window.open('', '_blank');
+if (!previewWindow || previewWindow.closed || typeof previewWindow.closed === 'undefined') {
+alert('Preview Blocked. Please allow popups in your browser.');
+return;
+}
+previewWindow.document.write(code);
+previewWindow.document.close();
+}
+const updateLineNumbers = () => {
+const lineCount = editor.value.split('\n').length;
+if (lineCount !== currentLineCount) {
+lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, i) => i + 1).join('<br>');
+currentLineCount = lineCount;
+}
+};
+function getMimeType(filename) {
+const extension = filename.split('.').pop().toLowerCase();
+const mimeTypes = {
+'html': 'text/html',
+'css': 'text/css',
+'js': 'application/javascript',
+'json': 'application/json',
+'txt': 'text/plain',
+'xml': 'application/xml',
+'svg': 'image/svg+xml',
+};
+return mimeTypes[extension] || 'text/plain';
+}
+async function openFile() {
+if ('showOpenFilePicker' in window) {
+try {
+const [fileHandle] = await window.showOpenFilePicker();
+currentFileHandle = fileHandle;
+const file = await fileHandle.getFile();
+const contents = await file.text();
+editor.value = contents;
+editor.scrollTop = 0;
+editor.setSelectionRange(0, 0);
+currentFileName = file.name;
+document.title = `${currentFileName} - ${APP_TITLE}`;
+updateLineNumbers();
+hasUnsavedChanges = false;
+findInput.value = "";
+findMatches();
+} catch (err) {
+console.error('User aborted error.', err);
+}
+} else {
+fileInput.click();
+}
+}
+function readFile(input) {
+const file = input.files[0];
+if (file) {
+const reader = new FileReader();
+reader.onload = function (e) {
+editor.value = e.target.result;
+editor.scrollTop = 0;
+editor.setSelectionRange(0, 0);
+updateLineNumbers();
+hasUnsavedChanges = false;
+findInput.value = "";
+findMatches();
+};
+reader.readAsText(file);
+currentFileName = file.name;
+document.title = `${currentFileName} - ${APP_TITLE}`;
+currentFileHandle = null;
+}
+input.value = '';
+}
+async function quickSaveFile() {
+if (!currentFileHandle) {
+alert("You have to open a file first with (🔻) to enable quick save (overwrite).");
+return;
+}
+try {
+const writable = await currentFileHandle.createWritable();
+await writable.write(editor.value);
+await writable.close();
+hasUnsavedChanges = false;
+document.title = `${currentFileName} - ${APP_TITLE}`;
+} catch (err) {
+console.error("Could not save file.", err);
+alert("Error when saving file.");
+}
+}
+function exportFile() {
+const blob = new Blob([editor.value], {
+type: `${getMimeType(currentFileName)};charset=utf-8`
+});
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = currentFileName;
+a.click();
+URL.revokeObjectURL(a.href);
+a.remove();
+hasUnsavedChanges = false;
+document.title = `${currentFileName} - ${APP_TITLE}`;
+}
+if ('showOpenFilePicker' in window) {
+quickSaveButton.style.display = 'inline-block';
+quickSaveButton.addEventListener('click', quickSaveFile);
+}
+openButton.addEventListener('click', openFile);
+saveButton.addEventListener('click', exportFile);
+newWindowButton.addEventListener('click', () => {
+window.open(window.location.href, '_blank');
+});
+previewButton.addEventListener('click', showPreview);
+fileInput.addEventListener('change', () => readFile(fileInput));
+colorPickerButton.addEventListener('click', (e) => {
+e.stopPropagation();
+if (colorPickerContainer.style.display === 'block') {
+colorPickerContainer.style.display = 'none';
+} else {
+colorPickerContainer.style.display = 'block';
+}
+});
+document.addEventListener('click', (e) => {
+if (colorPickerContainer.style.display === 'block' && !colorPickerContainer.contains(e.target) && e.target !== colorPickerButton) {
+colorPickerContainer.style.display = 'none';
+}
+});
+findInput.addEventListener('input', findMatches);
+findInput.addEventListener('keydown', (e) => {
+if (e.key === 'Enter') {
+e.preventDefault();
+if (matches.length > 0) {
+nextMatchBtn.click();
+}
+}
+});
+nextMatchBtn.addEventListener('mousedown', (e) => {
+e.preventDefault();
+if (matches.length === 0) return;
+currentMatchIndex = (currentMatchIndex + 1) % matches.length;
+highlightCurrentMatch();
+updateStatus();
+});
+prevMatchBtn.addEventListener('mousedown', (e) => {
+e.preventDefault();
+if (matches.length === 0) return;
+currentMatchIndex = (currentMatchIndex - 1 + matches.length) % matches.length;
+highlightCurrentMatch();
+updateStatus();
+});
+editor.addEventListener('input', () => {
+updateLineNumbers();
+if (!hasUnsavedChanges) {
+hasUnsavedChanges = true;
+document.title = `* ${currentFileName} - ${APP_TITLE}`;
+}
+});
+editor.addEventListener('scroll', () => {
+lineNumbers.scrollTop = editor.scrollTop;
+});
+editor.addEventListener('wheel', (e) => {
+if (e.deltaX < 0 && editor.scrollLeft === 0) {
+e.preventDefault();
+}
+});
+editor.addEventListener('keydown', function (e) {
+if (e.key === 'Tab') {
+e.preventDefault();
+const start = this.selectionStart;
+const end = this.selectionEnd;
+const value = this.value;
+const tabCharacter = '  ';
+if (start !== end) {
+const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+const textToModify = value.substring(lineStart, end);
+let newText;
+if (!e.shiftKey) {
+newText = textToModify.split('\n')
+.map((line, index, arr) => {
+if (index === arr.length - 1 && line === '') {
+return '';
+}
+return tabCharacter + line;
+})
+.join('\n');
+} else {
+newText = textToModify.split('\n')
+.map(line => {
+if (line.startsWith(tabCharacter)) {
+return line.substring(tabCharacter.length);
+}
+return line;
+})
+.join('\n');
+}
+this.setRangeText(newText, lineStart, end);
+this.setSelectionRange(lineStart, lineStart + newText.length);
+} else {
+if (!e.shiftKey) {
+this.setRangeText(tabCharacter, start, end, 'end');
+}
+}
+this.dispatchEvent(new Event('input', { bubbles: true }));
+}
+});
+document.addEventListener('keydown', function (e) {
+if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+e.preventDefault();
+if (currentFileHandle) {
+quickSaveFile();
+} else {
+exportFile();
+}
+}
+if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+e.preventDefault();
+openFile();
+}
+if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+e.preventDefault();
+findInput.focus();
+findInput.select();
+}
+});
+window.addEventListener('beforeunload', (e) => {
+if (hasUnsavedChanges) {
+e.preventDefault();
+e.returnValue = '';
+}
+});
+window.addEventListener('focus', () => {
+if (document.activeElement !== findInput) {
+editor.focus();
+}
+});
+generateColorGrid();
+updateLineNumbers();
+setTimeout(() => {
+editor.focus();
+}, 0);
+});
+</script>
+</body>
+</html>
