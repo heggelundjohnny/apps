@@ -1,301 +1,323 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UTF-8 Library</title>
-<style>
-body {
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-margin: 0;
-background-color: #f4f4f9;
-color: #333;
-display: flex;
-}
-#sidebar {
-width: 250px;
-background-color: #fff;
-border-right: 1px solid #ddd;
-padding: 20px;
-height: 100vh;
-overflow-y: auto;
-position: fixed;
-top: 0;
-left: 0;
-}
-#sidebar h2 {
-margin-top: 0;
-color: #005a9c;
-}
-#sidebar input {
-width: 100%;
-padding: 8px;
-margin-bottom: 20px;
-border: 1px solid #ccc;
-border-radius: 4px;
-box-sizing: border-box;
-}
-#sidebar ul {
-list-style-type: none;
-padding: 0;
-margin: 0;
-}
-#sidebar ul li a {
-display: block;
-padding: 8px 10px;
-text-decoration: none;
-color: #333;
-border-radius: 4px;
-}
-#sidebar ul li a:hover {
-background-color: #e9e9e9;
-}
-#main-content {
-margin-left: 290px;
-padding: 20px;
-width: calc(100% - 290px);
-}
-.category {
-margin-bottom: 40px;
-border-top: 2px solid #005a9c;
-padding-top: 20px;
-}
-.category h2 {
-margin-top: 0;
-color: #005a9c;
-}
-.symbol-grid {
-display: grid;
-grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-gap: 10px;
-}
-.symbol-card {
-background-color: #fff;
-border: 1px solid #ddd;
-border-radius: 8px;
-padding: 10px;
-text-align: center;
-cursor: pointer;
-transition: transform 0.2s, box-shadow 0.2s;
-position: relative;
-}
-.symbol-card:hover {
-transform: translateY(-5px);
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-.symbol-char {
-font-size: 36px;
-line-height: 1.2;
-}
-.symbol-info {
-font-size: 12px;
-color: #666;
-margin-top: 5px;
-display: none;
-}
-.symbol-card:hover .symbol-info {
-display: block;
-}
-.copy-notification {
-position: fixed;
-top: 20px;
-right: 20px;
-background-color: #4CAF50;
-color: white;
-padding: 15px;
-border-radius: 5px;
-z-index: 1000;
-opacity: 0;
-transition: opacity 0.5s;
-}
-@media (max-width: 768px) {
-body {
-flex-direction: column;
-}
-#sidebar {
-position: static;
-width: 100%;
-height: auto;
-border-right: none;
-border-bottom: 1px solid #ddd;
-}
-#main-content {
-margin-left: 0;
-width: 100%;
-padding: 10px;
-box-sizing: border-box;
-}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UTF-8 Library</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      background-color: #f4f4f9;
+      color: #333;
+      display: flex;
+    }
+
+    #sidebar {
+      width: 250px;
+      background-color: #fff;
+      border-right: 1px solid #ddd;
+      padding: 20px;
+      height: 100vh;
+      overflow-y: auto;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+
+    #sidebar h2 {
+      margin-top: 0;
+      color: #005a9c;
+    }
+
+    #sidebar input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    #sidebar ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #sidebar ul li a {
+      display: block;
+      padding: 8px 10px;
+      text-decoration: none;
+      color: #333;
+      border-radius: 4px;
+    }
+
+    #sidebar ul li a:hover {
+      background-color: #e9e9e9;
+    }
+
+    #main-content {
+      margin-left: 290px;
+      padding: 20px;
+      width: calc(100% - 290px);
+    }
+
+    .category {
+      margin-bottom: 40px;
+      border-top: 2px solid #005a9c;
+      padding-top: 20px;
+    }
+
+    .category h2 {
+      margin-top: 0;
+      color: #005a9c;
+    }
+
+    .symbol-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+    }
+
+    .symbol-card {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .symbol-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .symbol-char {
+      font-size: 36px;
+      line-height: 1.2;
+    }
+
+    .symbol-info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .symbol-card:hover .symbol-info {
+      display: block;
+    }
+
+    .copy-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px;
+      border-radius: 5px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+
+      #sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      #main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div id="sidebar">
-<h2>Kategorier</h2>
-<input type="text" id="searchInput" placeholder="Søk etter symboler...">
-<ul id="category-menu"></ul>
-</div>
-<div id="main-content">
-<h1>UTF-8 Symbolbibliotek</h1>
-<p>Klikk på et symbol for å kopiere det til utklippstavlen. Hold musepekeren over et symbol for å se detaljer.</p>
-<div id="symbol-container"></div>
-</div>
-<div id="copy-notification" class="copy-notification">Kopiert til utklippstavlen!</div>
-<script>
-const symbolsData = [
-{
-category: "Standard tegnsetting og symboler",
-symbols: [
-{ range: [0x20, 0x7E], name: "Basic Latin" },
-{ range: [0xA0, 0xFF], name: "Latin-1 Supplement" }
-]
-},
-{
-category: "Valutasymboler",
-symbols: [
-{ range: [0x20A0, 0x20CF], name: "Currency Symbols" }
-]
-},
-{
-category: "Piler",
-symbols: [
-{ range: [0x2190, 0x21FF], name: "Arrows" },
-{ range: [0x27F0, 0x27FF], name: "Supplemental Arrows-A" },
-{ range: [0x2900, 0x297F], name: "Supplemental Arrows-B" },
-{ range: [0x2B00, 0x2BFF], name: "Miscellaneous Symbols and Arrows" }
-]
-},
-{
-category: "Matematiske operatorer",
-symbols: [
-{ range: [0x2200, 0x22FF], name: "Mathematical Operators" },
-{ range: [0x2A00, 0x2AFF], name: "Supplemental Mathematical Operators" }
-]
-},
-{
-category: "Bokstegn og geometriske figurer",
-symbols: [
-{ range: [0x2500, 0x257F], name: "Box Drawing" },
-{ range: [0x2580, 0x259F], name: "Block Elements" },
-{ range: [0x25A0, 0x25FF], name: "Geometric Shapes" }
-]
-},
-{
-category: "Diverse symboler",
-symbols: [
-{ range: [0x2600, 0x26FF], name: "Miscellaneous Symbols" }
-]
-},
-{
-category: "Dingbats (Dekorative tegn)",
-symbols: [
-{ range: [0x2700, 0x27BF], name: "Dingbats" }
-]
-},
-{
-category: "Braille (Blindeskrift)",
-symbols: [
-{ range: [0x2800, 0x28FF], name: "Braille Patterns" }
-]
-},
-{
-category: "Emoji og piktogrammer",
-symbols: [
-{ range: [0x1F300, 0x1F5FF], name: "Miscellaneous Symbols and Pictographs" },
-{ range: [0x1F600, 0x1F64F], name: "Emoticons" },
-{ range: [0x1F680, 0x1F6FF], name: "Transport and Map Symbols" },
-{ range: [0x1F900, 0x1F9FF], name: "Supplemental Symbols and Pictographs" }
-]
-}
-];
-document.addEventListener('DOMContentLoaded', function () {
-const symbolContainer = document.getElementById('symbol-container');
-const categoryMenu = document.getElementById('category-menu');
-const searchInput = document.getElementById('searchInput');
-function generateSymbols() {
-symbolContainer.innerHTML = '';
-categoryMenu.innerHTML = '';
-symbolsData.forEach(catData => {
-const categoryId = catData.category.replace(/\s+/g, '-').toLowerCase();
-const menuItem = document.createElement('li');
-const menuLink = document.createElement('a');
-menuLink.textContent = catData.category;
-menuLink.href = `#${categoryId}`;
-menuItem.appendChild(menuLink);
-categoryMenu.appendChild(menuItem);
-const categoryDiv = document.createElement('div');
-categoryDiv.id = categoryId;
-categoryDiv.className = 'category';
-const categoryTitle = document.createElement('h2');
-categoryTitle.textContent = catData.category;
-categoryDiv.appendChild(categoryTitle);
-const symbolGrid = document.createElement('div');
-symbolGrid.className = 'symbol-grid';
-catData.symbols.forEach(block => {
-for (let i = block.range[0]; i <= block.range[1]; i++) {
-const char = String.fromCodePoint(i);
-const hex = 'U+' + i.toString(16).toUpperCase().padStart(4, '0');
-const card = document.createElement('div');
-card.className = 'symbol-card';
-card.setAttribute('data-char', char);
-card.setAttribute('data-name', `${block.name} ${hex}`);
-const charSpan = document.createElement('span');
-charSpan.className = 'symbol-char';
-charSpan.textContent = char;
-card.appendChild(charSpan);
-const infoDiv = document.createElement('div');
-infoDiv.className = 'symbol-info';
-infoDiv.innerHTML = `
+  <div id="sidebar">
+    <h2>Kategorier</h2>
+    <input type="text" id="searchInput" placeholder="Søk etter symboler...">
+    <ul id="category-menu"></ul>
+  </div>
+  <div id="main-content">
+    <h1>UTF-8 Symbolbibliotek</h1>
+    <p>Klikk på et symbol for å kopiere det til utklippstavlen. Hold musepekeren over et symbol for å se detaljer.</p>
+    <div id="symbol-container"></div>
+  </div>
+  <div id="copy-notification" class="copy-notification">Kopiert til utklippstavlen!</div>
+  <script>
+    const symbolsData = [
+      {
+        category: "Standard tegnsetting og symboler",
+        symbols: [
+          { range: [0x20, 0x7E], name: "Basic Latin" },
+          { range: [0xA0, 0xFF], name: "Latin-1 Supplement" }
+        ]
+      },
+      {
+        category: "Valutasymboler",
+        symbols: [
+          { range: [0x20A0, 0x20CF], name: "Currency Symbols" }
+        ]
+      },
+      {
+        category: "Piler",
+        symbols: [
+          { range: [0x2190, 0x21FF], name: "Arrows" },
+          { range: [0x27F0, 0x27FF], name: "Supplemental Arrows-A" },
+          { range: [0x2900, 0x297F], name: "Supplemental Arrows-B" },
+          { range: [0x2B00, 0x2BFF], name: "Miscellaneous Symbols and Arrows" }
+        ]
+      },
+      {
+        category: "Matematiske operatorer",
+        symbols: [
+          { range: [0x2200, 0x22FF], name: "Mathematical Operators" },
+          { range: [0x2A00, 0x2AFF], name: "Supplemental Mathematical Operators" }
+        ]
+      },
+      {
+        category: "Bokstegn og geometriske figurer",
+        symbols: [
+          { range: [0x2500, 0x257F], name: "Box Drawing" },
+          { range: [0x2580, 0x259F], name: "Block Elements" },
+          { range: [0x25A0, 0x25FF], name: "Geometric Shapes" }
+        ]
+      },
+      {
+        category: "Diverse symboler",
+        symbols: [
+          { range: [0x2600, 0x26FF], name: "Miscellaneous Symbols" }
+        ]
+      },
+      {
+        category: "Dingbats (Dekorative tegn)",
+        symbols: [
+          { range: [0x2700, 0x27BF], name: "Dingbats" }
+        ]
+      },
+      {
+        category: "Braille (Blindeskrift)",
+        symbols: [
+          { range: [0x2800, 0x28FF], name: "Braille Patterns" }
+        ]
+      },
+      {
+        category: "Emoji og piktogrammer",
+        symbols: [
+          { range: [0x1F300, 0x1F5FF], name: "Miscellaneous Symbols and Pictographs" },
+          { range: [0x1F600, 0x1F64F], name: "Emoticons" },
+          { range: [0x1F680, 0x1F6FF], name: "Transport and Map Symbols" },
+          { range: [0x1F900, 0x1F9FF], name: "Supplemental Symbols and Pictographs" }
+        ]
+      }
+    ];
+    document.addEventListener('DOMContentLoaded', function () {
+      const symbolContainer = document.getElementById('symbol-container');
+      const categoryMenu = document.getElementById('category-menu');
+      const searchInput = document.getElementById('searchInput');
+      function generateSymbols() {
+        symbolContainer.innerHTML = '';
+        categoryMenu.innerHTML = '';
+        symbolsData.forEach(catData => {
+          const categoryId = catData.category.replace(/\s+/g, '-').toLowerCase();
+          const menuItem = document.createElement('li');
+          const menuLink = document.createElement('a');
+          menuLink.textContent = catData.category;
+          menuLink.href = `#${categoryId}`;
+          menuItem.appendChild(menuLink);
+          categoryMenu.appendChild(menuItem);
+          const categoryDiv = document.createElement('div');
+          categoryDiv.id = categoryId;
+          categoryDiv.className = 'category';
+          const categoryTitle = document.createElement('h2');
+          categoryTitle.textContent = catData.category;
+          categoryDiv.appendChild(categoryTitle);
+          const symbolGrid = document.createElement('div');
+          symbolGrid.className = 'symbol-grid';
+          catData.symbols.forEach(block => {
+            for (let i = block.range[0]; i <= block.range[1]; i++) {
+              const char = String.fromCodePoint(i);
+              const hex = 'U+' + i.toString(16).toUpperCase().padStart(4, '0');
+              const card = document.createElement('div');
+              card.className = 'symbol-card';
+              card.setAttribute('data-char', char);
+              card.setAttribute('data-name', `${block.name} ${hex}`);
+              const charSpan = document.createElement('span');
+              charSpan.className = 'symbol-char';
+              charSpan.textContent = char;
+              card.appendChild(charSpan);
+              const infoDiv = document.createElement('div');
+              infoDiv.className = 'symbol-info';
+              infoDiv.innerHTML = `
 <strong>HTML:</strong> &amp;#${i};<br>
 <strong>HEX:</strong> ${hex}<br>
 <strong>CSS:</strong> \\${i.toString(16)}
 `;
-card.appendChild(infoDiv);
-card.addEventListener('click', function () {
-copyToClipboard(char);
-});
-symbolGrid.appendChild(card);
-}
-});
-categoryDiv.appendChild(symbolGrid);
-symbolContainer.appendChild(categoryDiv);
-});
-}
-function copyToClipboard(text) {
-navigator.clipboard.writeText(text).then(function () {
-const notification = document.getElementById('copy-notification');
-notification.style.opacity = '1';
-setTimeout(() => {
-notification.style.opacity = '0';
-}, 2000);
-}, function (err) {
-console.error('Kunne ikke kopiere tekst: ', err);
-});
-}
-function filterSymbols() {
-const filter = searchInput.value.toLowerCase();
-const cards = document.querySelectorAll('.symbol-card');
-const categories = document.querySelectorAll('.category');
-cards.forEach(card => {
-const char = card.getAttribute('data-char');
-const name = card.getAttribute('data-name').toLowerCase();
-if (char.includes(filter) || name.includes(filter)) {
-card.style.display = '';
-} else {
-card.style.display = 'none';
-}
-});
-categories.forEach(category => {
-const visibleCards = category.querySelectorAll('.symbol-card[style*="display: "], .symbol-card:not([style])');
-if (visibleCards.length > 0) {
-category.style.display = '';
-} else {
-category.style.display = 'none';
-}
-});
-}
-searchInput.addEventListener('keyup', filterSymbols);
-generateSymbols();
-});
-</script>
+              card.appendChild(infoDiv);
+              card.addEventListener('click', function () {
+                copyToClipboard(char);
+              });
+              symbolGrid.appendChild(card);
+            }
+          });
+          categoryDiv.appendChild(symbolGrid);
+          symbolContainer.appendChild(categoryDiv);
+        });
+      }
+      function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function () {
+          const notification = document.getElementById('copy-notification');
+          notification.style.opacity = '1';
+          setTimeout(() => {
+            notification.style.opacity = '0';
+          }, 2000);
+        }, function (err) {
+          console.error('Kunne ikke kopiere tekst: ', err);
+        });
+      }
+      function filterSymbols() {
+        const filter = searchInput.value.toLowerCase();
+        const cards = document.querySelectorAll('.symbol-card');
+        const categories = document.querySelectorAll('.category');
+        cards.forEach(card => {
+          const char = card.getAttribute('data-char');
+          const name = card.getAttribute('data-name').toLowerCase();
+          if (char.includes(filter) || name.includes(filter)) {
+            card.style.display = '';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+        categories.forEach(category => {
+          const visibleCards = category.querySelectorAll('.symbol-card[style*="display: "], .symbol-card:not([style])');
+          if (visibleCards.length > 0) {
+            category.style.display = '';
+          } else {
+            category.style.display = 'none';
+          }
+        });
+      }
+      searchInput.addEventListener('keyup', filterSymbols);
+      generateSymbols();
+    });
+  </script>
 </body>
+
 </html>
