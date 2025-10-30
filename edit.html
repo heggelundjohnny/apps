@@ -1,258 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Minimalist Pure Text & Code Editor</title>
-<meta name="description" content="Code & Text Editor in a retro terminal black and green theme, perfect for pure text or coding HTML, CSS & JS.">
-<meta name="author" content="Johnny Heggelund">
-<link rel="canonical" href="https://www.chromebooker.com/edit.html">
-<meta name="robots" content="index, follow">
-<style>
-:root {
---b: #000;
---t: #39FF14;
---f: 'Courier New', monospace;
-/* Strong yellow whitespace dot */
---hl: #FFBF00; 
-}
-html,
-body {
-margin: 0;
-padding: 0;
-width: 100%;
-height: 100%;
-background: var(--b);
-overflow: hidden;
-position: relative;
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit</title>
+  <style>
+    :root {
+      --b: #000;
+      --t: #39FF14;
+      --f: 'Courier New', monospace;
+      --hl: #FFBF00;
+    }
 
-/* Common styles for textarea and highlight pre */
-#e, #h {
-width: 100%;
-height: 100%;
-box-sizing: border-box;
-border: 0;
-outline: 0;
-resize: none;
-font: 16px var(--f);
-padding: 15px;
-white-space: pre;
-overflow-wrap: normal;
-overflow: auto;
-margin: 0;
-position: absolute;
-top: 0;
-left: 0;
-/* --- THIS IS THE FIX --- */
-line-height: 1.5;
-}
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--b);
+      overflow: hidden;
+      position: relative;
+    }
 
-/* Textarea is on top, transparent */
-#e {
-background: transparent;
-color: var(--t);
-caret-color: #00BFFF;
-z-index: 2;
-}
+    #e,
+    #h {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      border: 0;
+      outline: 0;
+      resize: none;
+      font: 16px var(--f);
+      padding: 15px;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow: auto;
+      margin: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      line-height: 1.5;
+    }
 
-/* Highlight layer is behind, faded, and unclickable */
-#h {
-color: var(--hl);
-z-index: 1;
-pointer-events: none;
-overflow: hidden;
-}
+    #e {
+      background: transparent;
+      color: var(--t);
+      caret-color: #00BFFF;
+      z-index: 2;
+    }
 
-/* --- Toast Notification --- */
-#toast {
-position: fixed;
-top: 20px;
-left: 50%;
-transform: translateX(-50%);
-background: #222;
-color: var(--t);
-border: 1px solid var(--t);
-padding: 10px 20px;
-border-radius: 5px;
-font-family: var(--f);
-z-index: 100;
-opacity: 0;
-pointer-events: none;
-transition: opacity 0.5s ease-in-out;
-}
-#toast.show {
-opacity: 1;
-}
-/* --- End of Toast CSS --- */
-</style>
+    #h {
+      color: var(--hl);
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    #toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      color: var(--t);
+      border: 1px solid var(--t);
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-family: var(--f);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #toast.show {
+      opacity: 1;
+    }
+  </style>
 </head>
+
 <body>
-
-<pre id="h" aria-hidden="true"></pre>
-
-<textarea id="e" spellcheck="false"></textarea>
-
-<div id="toast"></div>
-
-<script>
-const E = {
-h: null, n: 'Untitled', d: false, v: 1, e: null,
-h_el: null, // For whitespace highlight
-toast_el: null, // For toast message
-toast_timer: null, // Timer for toast
-init() {
-this.e = document.getElementById('e');
-this.h_el = document.getElementById('h');
-this.toast_el = document.getElementById('toast');
-
-this.e.oninput = () => {
-if (!this.d) this.dirty(true);
-this.highlight();
-};
-this.e.onkeydown = this.tab.bind(this);
-this.e.onscroll = this.scroll.bind(this);
-
-// Attached to 'window' to catch shortcuts
-window.onkeydown = this.key.bind(this);
-window.onbeforeunload = this.unload.bind(this);
-
-// Automatically focus textarea (preventScroll stops search-jump)
-window.onfocus = () => this.e.focus({ preventScroll: true });
-
-this.dirty(false);
-this.highlight();
-this.e.focus();
-},
-dirty(isDirty) {
-this.d = isDirty;
-document.title = `${isDirty ? '*' : ''}${this.n}`;
-},
-scroll() {
-this.h_el.scrollTop = this.e.scrollTop;
-this.h_el.scrollLeft = this.e.scrollLeft;
-},
-
-highlight() {
-const val = this.e.value;
-let hlText = val.replace(/[ \t]+$/gm, (match) => {
-return '·'.repeat(match.length);
-});
-// Preserve all line endings and dots
-hlText = hlText.replace(/[^\n\r·]/g, ' ');
-this.h_el.textContent = hlText;
-},
-
-checkWhitespace() {
-const lines = this.e.value.split('\n');
-const regex = /[ \t]+$/;
-const count = lines.filter(line => regex.test(line)).length;
-
-if (count === 0) {
-this.showToast("No trailing whitespace found. ✨");
-} else if (count === 1) {
-this.showToast("1 line has trailing whitespace.");
-} else {
-this.showToast(`${count} lines have trailing whitespace.`);
-}
-},
-showToast(message) {
-if (this.toast_timer) {
-clearTimeout(this.toast_timer);
-}
-this.toast_el.textContent = message;
-this.toast_el.classList.add('show');
-
-this.toast_timer = setTimeout(() => {
-this.toast_el.classList.remove('show');
-this.toast_timer = null;
-}, 2000); // 2 seconds
-},
-
-async open() {
-if (this.d && !confirm("Unsaved changes. Continue?")) return;
-try {
-[this.h] = await showOpenFilePicker();
-const file = await this.h.getFile();
-this.e.value = await file.text();
-this.n = file.name;
-this.v = 1;
-this.dirty(false);
-this.highlight();
-} catch (err) { }
-this.e.focus();
-},
-async save() {
-try {
-if (!this.h) {
-this.h = await showSaveFilePicker({
-suggestedName: 'Untitled.txt',
-types: [{
-description: 'All Files',
-accept: { '*/*': ['.txt', '.html', '.css', 'js'] },
-}],
-});
-this.n = this.h.name;
-}
-const writable = await this.h.createWritable();
-await writable.write(this.e.value);
-await writable.close();
-this.dirty(false);
-} catch (err) { }
-this.e.focus();
-},
-
-key(e) {
-// Now checks for 'e.altKey' instead of Ctrl/Meta
-if (!e.altKey) return;
-
-const k = e.key.toLowerCase();
-// Prevent default browser action for Alt+O/S/W
-if (k === 'o' || k === 's' || k === 'w') e.preventDefault();
-
-if (k === 'o') this.open();
-if (k === 's') this.save();
-if (k === 'w') this.checkWhitespace();
-},
-
-unload(e) {
-if (this.d) { e.preventDefault(); e.returnValue = ''; }
-},
-tab(e) {
-if (e.key !== 'Tab') return;
-e.preventDefault();
-const { value: v, selectionStart: ss, selectionEnd: se } = this.e;
-const tab = '  ';
-const start = v.lastIndexOf('\n', ss - 1) + 1;
-
-// Fixed bug by changing 'se - 1' to 'se'
-const endIdx = v.indexOf('\n', se);
-
-const end = endIdx === -1 ? v.length : endIdx;
-const oldLines = v.substring(start, end);
-const lines = oldLines.split('\n');
-let changed = 0;
-const newLines = lines.map(line => {
-if (e.shiftKey) {
-if (line.startsWith(tab)) {
-changed -= tab.length;
-return line.substring(tab.length);
-}
-} else if (line || lines.length === 1) {
-changed += tab.length;
-return tab + line;
-}
-return line;
-}).join('\n');
-if (oldLines === newLines) return;
-this.e.value = v.substring(0, start) + newLines + v.substring(end);
-this.e.selectionStart = ss + (newLines.split('\n')[0].length - lines[0].length);
-this.e.selectionEnd = se + changed;
-if (!this.d) this.dirty(true);
-this.highlight();
-}
-};
-window.onload = () => E.init();
-</script>
+  <pre id="h" aria-hidden="true"></pre>
+  <textarea id="e" spellcheck="false"></textarea>
+  <div id="toast"></div>
+  <script>
+    const E = {
+      h: null, n: 'Untitled', d: false, v: 1, e: null,
+      h_el: null,
+      toast_el: null,
+      toast_timer: null,
+      init() {
+        this.e = document.getElementById('e');
+        this.h_el = document.getElementById('h');
+        this.toast_el = document.getElementById('toast');
+        this.e.oninput = () => {
+          if (!this.d) this.dirty(true);
+          this.highlight();
+        };
+        this.e.onkeydown = this.tab.bind(this);
+        this.e.onscroll = this.scroll.bind(this);
+        window.onkeydown = this.key.bind(this);
+        window.onbeforeunload = this.unload.bind(this);
+        window.onfocus = () => this.e.focus({ preventScroll: true });
+        this.dirty(false);
+        this.highlight();
+        this.e.focus();
+      },
+      dirty(isDirty) {
+        this.d = isDirty;
+        document.title = `${isDirty ? '*' : ''}${this.n}`;
+      },
+      scroll() {
+        this.h_el.scrollTop = this.e.scrollTop;
+        this.h_el.scrollLeft = this.e.scrollLeft;
+      },
+      highlight() {
+        const val = this.e.value;
+        let hlText = val.replace(/[ \t]+$/gm, (match) => {
+          return '·'.repeat(match.length);
+        });
+        hlText = hlText.replace(/[^\n\r·]/g, ' ');
+        this.h_el.textContent = hlText;
+      },
+      checkWhitespace() {
+        const lines = this.e.value.split('\n');
+        const regex = /[ \t]+$/;
+        const count = lines.filter(line => regex.test(line)).length;
+        if (count === 0) {
+          this.showToast("No trailing whitespace found. ✨");
+        } else if (count === 1) {
+          this.showToast("1 line has trailing whitespace.");
+        } else {
+          this.showToast(`${count} lines have trailing whitespace.`);
+        }
+      },
+      showToast(message) {
+        if (this.toast_timer) {
+          clearTimeout(this.toast_timer);
+        }
+        this.toast_el.textContent = message;
+        this.toast_el.classList.add('show');
+        this.toast_timer = setTimeout(() => {
+          this.toast_el.classList.remove('show');
+          this.toast_timer = null;
+        }, 2000);
+      },
+      async open() {
+        if (this.d && !confirm("Unsaved changes. Continue?")) return;
+        try {
+          [this.h] = await showOpenFilePicker();
+          const file = await this.h.getFile();
+          this.e.value = await file.text();
+          this.n = file.name;
+          this.v = 1;
+          this.dirty(false);
+          this.highlight();
+        } catch (err) { }
+        this.e.focus();
+      },
+      async save() {
+        try {
+          if (!this.h) {
+            this.h = await showSaveFilePicker({
+              suggestedName: 'Untitled.txt',
+              types: [{
+                description: 'All Files',
+                accept: { '*/*': ['.txt', '.html', '.css', 'js'] },
+              }],
+            });
+            this.n = this.h.name;
+          }
+          const writable = await this.h.createWritable();
+          await writable.write(this.e.value);
+          await writable.close();
+          this.dirty(false);
+        } catch (err) { }
+        this.e.focus();
+      },
+      key(e) {
+        if (!e.altKey) return;
+        const k = e.key.toLowerCase();
+        if (k === 'o' || k === 's' || k === 'w') e.preventDefault();
+        if (k === 'o') this.open();
+        if (k === 's') this.save();
+        if (k === 'w') this.checkWhitespace();
+      },
+      unload(e) {
+        if (this.d) { e.preventDefault(); e.returnValue = ''; }
+      },
+      tab(e) {
+        if (e.key !== 'Tab') return;
+        e.preventDefault();
+        const { value: v, selectionStart: ss, selectionEnd: se } = this.e;
+        const tab = '  ';
+        const start = v.lastIndexOf('\n', ss - 1) + 1;
+        const endIdx = v.indexOf('\n', se);
+        const end = endIdx === -1 ? v.length : endIdx;
+        const oldLines = v.substring(start, end);
+        const lines = oldLines.split('\n');
+        let changed = 0;
+        const newLines = lines.map(line => {
+          if (e.shiftKey) {
+            if (line.startsWith(tab)) {
+              changed -= tab.length;
+              return line.substring(tab.length);
+            }
+          } else if (line || lines.length === 1) {
+            changed += tab.length;
+            return tab + line;
+          }
+          return line;
+        }).join('\n');
+        if (oldLines === newLines) return;
+        this.e.value = v.substring(0, start) + newLines + v.substring(end);
+        this.e.selectionStart = ss + (newLines.split('\n')[0].length - lines[0].length);
+        this.e.selectionEnd = se + changed;
+        if (!this.d) this.dirty(true);
+        this.highlight();
+      }
+    };
+    window.onload = () => E.init();
+  </script>
 </body>
+
 </html>
