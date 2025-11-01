@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>100 Laps</title>
 <style>
-
 body {
 margin: 0;
 overflow: hidden;
@@ -21,18 +19,15 @@ color: #ecf0f1;
 padding: 0px;
 gap: 20px;
 }
-
 #gameContainer {
 position: relative;
 }
-
 canvas {
 background-color: #333;
 display: block;
 cursor: default;
 border-radius: 0px 0px 8px 8px;
 }
-
 #uiPanel {
 width: 320px;
 padding: 15px;
@@ -41,7 +36,6 @@ border-radius: 0px 0px 8px 8px;
 box-shadow: 2px 2px 4px 2px rgba(0, 0, 0, 0.75);
 color: #ecf0f1;
 }
-
 #uiPanel h2 {
 font-size: 1.5em;
 margin-top: 0;
@@ -49,29 +43,24 @@ margin-bottom: 10px;
 border-bottom: 1px solid #444;
 padding-bottom: 5px;
 }
-
 #statsContainer div {
 font-size: 1.1em;
 margin-bottom: 8px;
 }
-
 #highScoreList {
 padding-left: 25px;
 margin: 0;
 font-size: 0.95em;
 list-style-type: decimal;
 }
-
 #highScoreList li {
 margin-bottom: 6px;
 line-height: 1.3;
 }
-
 #highScoreList li:empty {
 list-style-type: none;
 padding-left: 0;
 }
-
 .game-controls {
 position: absolute;
 top: 50%;
@@ -89,7 +78,6 @@ flex-direction: column;
 align-items: center;
 gap: 10px;
 }
-
 .game-controls button,
 #messageBox button {
 background-color: #008cba;
@@ -101,18 +89,15 @@ cursor: pointer;
 font-size: 1.3em;
 transition: background-color 0.3s ease, transform 0.1s ease;
 }
-
 .game-controls button:hover,
 #messageBox button:hover {
 background-color: #007bb5;
 transform: scale(1.02);
 }
-
 .game-controls button:active,
 #messageBox button:active {
 transform: scale(0.98);
 }
-
 #messageBox {
 display: none;
 position: absolute;
@@ -130,21 +115,17 @@ flex-direction: column;
 align-items: center;
 gap: 20px;
 }
-
 #messageBox p {
 margin: 0;
 font-size: 1.8em;
 font-weight: bold;
 }
-
 #messageBox.win p {
 color: #4CAF50;
 }
-
 #messageBox.lose p {
 color: #F44336;
 }
-
 h1 {
 font-size: 2.2rem;
 margin-top: 2px;
@@ -159,7 +140,6 @@ margin: 0 0 20px 0;
 }
 </style>
 </head>
-
 <body>
 <div id="uiPanel">
 <p>Copyright &copy; 2025 Johnny Heggelund</p>
@@ -857,5 +837,4 @@ displayHighScores();
 drawEverything();
 </script>
 </body>
-
 </html>
