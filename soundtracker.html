@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Soundtracker</title>
-<script src="/stats/tracker.js" defer></script>
-<meta name="robots" content="noindex, nofollow">
 <style>
 :root {
 --bg-color: #1a1a2e;
@@ -347,7 +345,6 @@ constructor() { this.audioCtx = null; this.noteFrequencies = {}; this.instrument
 initAudioContext() { if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (this.audioCtx.state === 'suspended') this.audioCtx.resume(); }
 initNoteFrequencies() {
 const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-// FIX: Create frequencies for 10 octaves (0-9) to prevent range errors
 for (let o = 0; o < 10; o++) for (let i = 0; i < 12; i++) this.noteFrequencies[`${noteNames[i]}${o}`] = 440 * Math.pow(2, (o * 12 + i - 57) / 12);
 }
 defineInstruments() {
@@ -453,7 +450,6 @@ o.connect(g); g.connect(this.audioCtx.destination); o.start(time); o.stop(time +
 class Sequencer {
 constructor(audioManager, ui) {
 this.audioManager = audioManager; this.ui = ui; this.config = { tracks: 8 };
-// FIX: Added 'isPaused' state
 this.state = { isPlaying: false, isRecording: false, isPaused: false, loopStartTime: 0, currentPattern: 0, currentRow: 0, timerId: null, lookahead: 25.0, scheduleAheadTime: 0.1, nextNoteTime: 0.0 };
 this.song = this.createEmptySong(); this.loadDefaultSong();
 }
@@ -464,7 +460,7 @@ this.song.trackVolumes[0] = 0.8; this.song.trackVolumes[1] = 0.7; this.song.trac
 const p = this.song.patterns[0].data;
 p[0][0] = { note: 'C2', inst: 6 }; p[4][0] = { note: 'G1', inst: 6 }; p[8][0] = { note: 'A#1', inst: 6 }; p[12][0] = { note: 'A1', inst: 6 };
 p[4][1] = { note: 'C4', inst: 2 }; p[12][1] = { note: 'C4', inst: 2 };
-for (let i = 0; i < 16; i += 4) p[i][0] = { note: 'C4', inst: 1 }; // Changed to C4 Kick
+for (let i = 0; i < 16; i += 4) p[i][0] = { note: 'C4', inst: 1 };
 for (let i = 2; i < 16; i += 2) p[i][2] = { note: 'C4', inst: 3 };
 }
 setPatternLength(newLength) {
@@ -477,23 +473,20 @@ pattern.rows = newLength;
 record() {
 if (this.state.isPlaying) this.stop();
 this.state.isRecording = true;
-this.state.isPaused = false; // Can't start recording from pause
+this.state.isPaused = false;
 this.state.currentRow = 0;
-this.play(); // play() will see isPaused is false and start fresh
+this.play();
 }
-// FIX: Updated play() to handle resuming from pause
 play() {
 this.audioManager.initAudioContext(); if (this.state.isPlaying) return;
 this.state.isPlaying = true;
-this.state.isRecording = this.state.isRecording && !this.state.isPaused; // Keep recording if it was on, but not if resuming
+this.state.isRecording = this.state.isRecording && !this.state.isPaused;
 if (this.state.isPaused) {
-// Resuming from pause
 const timeDelta = this.audioManager.audioCtx.currentTime - this.state.nextNoteTime;
 this.state.loopStartTime += timeDelta;
-this.state.nextNoteTime = this.audioManager.audioCtx.currentTime + 0.05; // Schedule immediately
+this.state.nextNoteTime = this.audioManager.audioCtx.currentTime + 0.05;
 this.state.isPaused = false;
 } else {
-// Starting fresh, or after a full stop
 this.state.currentRow = 0;
 this.state.loopStartTime = this.audioManager.audioCtx.currentTime + 0.1;
 this.state.nextNoteTime = this.state.loopStartTime;
@@ -501,21 +494,19 @@ this.state.nextNoteTime = this.state.loopStartTime;
 this.state.timerId = setInterval(() => this.scheduler(), this.state.lookahead);
 this.ui.setPlaybackState(true, this.state.isRecording);
 }
-// FIX: Added pause() method
 pause() {
 if (!this.state.isPlaying) return;
 this.state.isPlaying = false;
 this.state.isPaused = true;
 clearInterval(this.state.timerId);
 this.state.timerId = null;
-this.ui.setPlaybackState(false, this.state.isRecording); // Show recording is paused
+this.ui.setPlaybackState(false, this.state.isRecording);
 }
-// FIX: Updated stop() to handle pause state
 stop() {
-if (!this.state.isPlaying && !this.state.isPaused) return; // Already stopped
+if (!this.state.isPlaying && !this.state.isPaused) return;
 this.state.isPlaying = false;
 this.state.isRecording = false;
-this.state.isPaused = false; // Full stop, not a pause
+this.state.isPaused = false;
 clearInterval(this.state.timerId); this.state.timerId = null;
 this.ui.setPlaybackState(false, false);
 }
@@ -532,11 +523,9 @@ scheduleRow() {
 const pattern = this.song.patterns[this.state.currentPattern]; const row = pattern.data[this.state.currentRow]; if (!row) return;
 for (let i = 0; i < this.config.tracks; i++) {
 const cell = row[i];
-if (cell && cell.inst && cell.note && this.audioManager.instruments[cell.inst]) { // Added cell.note check
+if (cell && cell.inst && cell.note && this.audioManager.instruments[cell.inst]) {
 const vol = this.song.trackVolumes[i];
-// FIX: Use instrument 'type' property
 const instType = this.audioManager.instruments[cell.inst].type;
-// FIX: Use correct 16th note duration for melodic instruments
 const dur = (instType === 'drum') ? 0.2 : (60.0 / this.song.bpm / 4.0);
 this.audioManager.instruments[cell.inst].play(cell.note, this.state.nextNoteTime, vol, dur);
 }
@@ -590,7 +579,7 @@ this.dom.instrumentGrid.querySelectorAll('li').forEach(li => li.addEventListener
 }
 updateGrid() {
 const pattern = this.sequencer.song.patterns[this.sequencer.state.currentPattern];
-if (!pattern) return; // Safeguard
+if (!pattern) return;
 for (let i = 0; i < pattern.rows; i++) {
 for (let j = 0; j < this.sequencer.config.tracks; j++) {
 const cellData = pattern.data[i] ? pattern.data[i][j] : null;
@@ -622,7 +611,6 @@ this.dom.instrumentGrid.querySelectorAll('li').forEach(li => li.classList.toggle
 }
 addEventListeners() {
 this.dom.recordBtn.addEventListener('click', () => this.sequencer.record());
-// FIX: Play button now toggles between play() and pause()
 this.dom.playBtn.addEventListener('click', () => this.sequencer.state.isPlaying ? this.sequencer.pause() : this.sequencer.play());
 this.dom.stopBtn.addEventListener('click', () => { this.sequencer.stop(); this.sequencer.state.currentRow = 0; this.updatePlayhead(-1); });
 this.dom.bpmInput.addEventListener('change', (e) => this.sequencer.song.bpm = parseInt(e.target.value));
@@ -643,7 +631,7 @@ if (s.patterns && s.trackVolumes) {
 this.sequencer.song = s;
 this.dom.bpmInput.value = s.bpm || 120;
 this.sequencer.state.currentPattern = 0;
-this.audioManager.initAudioContext(); // FIX: Ensure AudioContext is running
+this.audioManager.initAudioContext();
 this.changePattern(0);
 alert('Song imported!');
 }
@@ -655,7 +643,7 @@ this.dom.helpModal.addEventListener('click', (e) => { if (e.target === this.dom.
 }
 setPlaybackState(isPlaying, isRecording) {
 this.dom.playBtn.textContent = isPlaying ? "Pause" : "Play";
-this.dom.trackerContainer.classList.toggle('recording', isPlaying && isRecording); // Only glow if playing AND recording
+this.dom.trackerContainer.classList.toggle('recording', isPlaying && isRecording);
 }
 changePattern(delta) {
 let newIdx = this.sequencer.state.currentPattern + delta; if (newIdx < 0) return;
@@ -710,13 +698,11 @@ this.audioManager.instruments[this.selectedInstrument].play(note, this.audioMana
 if (this.sequencer.state.isRecording) {
 const pattern = this.sequencer.song.patterns[this.sequencer.state.currentPattern];
 const secondsPerRow = 60.0 / this.sequencer.song.bpm / 4.0;
-
-// FIX: Correct quantization logic for looping
 const patternDuration = pattern.rows * secondsPerRow;
 const timeInCurrentLoop = (this.audioManager.audioCtx.currentTime - this.sequencer.state.loopStartTime) % patternDuration;
 let quantizedRow = Math.round(timeInCurrentLoop / secondsPerRow);
-if (quantizedRow >= pattern.rows) quantizedRow = 0; // Handle wrap-around
-quantizedRow = Math.min(pattern.rows - 1, Math.max(0, quantizedRow)); // Safeguard
+if (quantizedRow >= pattern.rows) quantizedRow = 0;
+quantizedRow = Math.min(pattern.rows - 1, Math.max(0, quantizedRow));
 
 pattern.data[quantizedRow][this.cursor.col] = { note: note, inst: this.selectedInstrument };
 this.updateGrid();
@@ -726,19 +712,17 @@ pattern.data[this.cursor.row][this.cursor.col] = { note: note, inst: this.select
 this.cursor.row = Math.min(pattern.rows - 1, this.cursor.row + 1);
 this.updateGrid();
 }
-// FIX: Corrected instrument entry logic
 } else if (!isNaN(instNum) && instNum >= 0 && instNum < this.audioManager.instruments.length) {
 if (this.sequencer.state.isRecording) return;
 const pattern = this.sequencer.song.patterns[this.sequencer.state.currentPattern];
 let cell = pattern.data[this.cursor.row][this.cursor.col];
 if (!cell) {
-// Create a new cell object if it doesn't exist, but without a note
 cell = { note: null, inst: instNum };
 pattern.data[this.cursor.row][this.cursor.col] = cell;
 } else {
 cell.inst = instNum;
 }
-this.selectInstrument(instNum); // Also select the instrument
+this.selectInstrument(instNum);
 this.updateGrid();
 }
 }
@@ -751,7 +735,7 @@ const htmlContent = `
 body { font-family: sans-serif; background-color: #1a1a2e; color: #dcdcdc; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
 h1 { color: #e94560; } #playButton { font-size: 2em; padding: 20px 40px; cursor: pointer; border: 2px solid #16c79a; background-color: #0f3460; color: #dcdcdc; border-radius: 10px; }
 #playButton:hover { background-color: #e94560; } footer { margin-top: 2rem; opacity: 0.5; } a { color: #16c79a; }
-</style></head><body><h1>My Music Track</h1><button id="playButton">Play</button><footer><p>Created with <a href="https://gemini.google.com/">Gemini Soundtracker</a></p></footer>
+</style></head><body><h1>My Music Track</h1><button id="playButton">Play</button><footer><p>Created with Soundtracker</p></footer>
 <script>
 const songData = ${songJSON};
 ${playerCode}
@@ -812,11 +796,9 @@ _scheduleRow() {
 const pattern = this.songData.patterns[this.currentPattern]; const rowData = pattern.data[this.currentRow]; if (!rowData) return;
 for (let track = 0; track < this.songData.trackVolumes.length; track++) {
 const cell = rowData[track];
-if (cell && cell.inst && cell.note && this.instruments[cell.inst]) { // Added cell.note check
+if (cell && cell.inst && cell.note && this.instruments[cell.inst]) {
 const vol = this.songData.trackVolumes[track]; const bpm = this.songData.bpm || 120;
-// FIX: Use instrument 'type' property
 const instType = this.instruments[cell.inst].type;
-// FIX: Use correct 16th note duration
 const dur = (instType === 'drum') ? 0.2 : (60.0 / bpm / 4.0);
 this.instruments[cell.inst].play(cell.note, this.nextNoteTime, vol, dur);
 }
@@ -824,7 +806,6 @@ this.instruments[cell.inst].play(cell.note, this.nextNoteTime, vol, dur);
 }
 _initNoteFrequencies() {
 const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-// FIX: Create frequencies for 10 octaves (0-9)
 for (let o = 0; o < 10; o++) for (let i = 0; i < 12; i++) this.noteFrequencies[`${noteNames[i]}${o}`] = 440 * Math.pow(2, (o * 12 + i - 57) / 12);
 }
 _defineInstruments() {
