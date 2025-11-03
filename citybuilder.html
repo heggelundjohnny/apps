@@ -6,13 +6,17 @@
 <title>City Builder</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
+@font-face {
+font-family: 'NotoColorEmoji';
+src: url('NotoColorEmoji-Regular.ttf') format('truetype');
+}
 html,
 body {
 margin: 0;
 padding: 0;
 height: 100%;
 overflow: hidden;
-font-family: sans-serif;
+font-family: sans-serif, 'NotoColorEmoji';
 background-color: #1a1a1a;
 color: #f0f0f0;
 }
@@ -112,7 +116,7 @@ border: 1px solid #777;
 box-sizing: border-box;
 text-decoration: none;
 transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+font-family: sans-serif, 'NotoColorEmoji';
 }
 .tool-btn-grid {
 display: grid;
@@ -1551,7 +1555,7 @@ modalContent.innerHTML = `<span class="modal-close">&times;</span>
 <h4>Disasters & Challenges 🔥</h4>
 <p>Keep an eye on the event ticker at the top of the screen for news! A mayor's job is never easy.</p>
 <ul><li><strong>Fires (🔥):</strong> Can break out randomly in buildings. If you don't have a fire station nearby, they can spread and destroy entire neighborhoods!</li><li><strong>Thunderstorms (⛈️):</strong> A powerful storm can damage a power plant, shutting it down completely. Repairs are not immediate and can take several years, causing prolonged blackouts.</li><li><strong>Recession (📉):</strong> An economic downturn can happen at any time, temporarily cutting your city's tax income in half.</li><li><strong>King Kong (🦍):</strong> Yes, really. Occasionally, a giant ape will rampage through your city, clearing a path of destruction.</li></ul>
-<p style="text-align: center; margin-top: 20px;">Good luck, Mayor!</p><p>Copyright &copy; 2025 Johnny Heggelund</p>`;
+<p style="text-align: center; margin-top: 20px;">Good luck, Mayor!</p><p>&copy;2025 Johnny Heggelund</p>`;
 modalContent.querySelector('.modal-close').addEventListener('click', () => {
 modal.style.display = 'none';
 });

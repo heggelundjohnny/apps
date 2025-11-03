@@ -6,12 +6,16 @@
 <title>Adventure</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
+@font-face {
+font-family: 'NotoColorEmoji';
+src: url('NotoColorEmoji-Regular.ttf') format('truetype');
+}
 body,
 html {
 margin: 0;
 padding: 0;
 overflow: hidden;
-font-family: sans-serif;
+font-family: sans-serif, 'NotoColorEmoji';
 background-color: #1a1a1a;
 display: flex;
 flex-direction: column;
@@ -913,7 +917,7 @@ function showHowToPlay() {
 const costs = gameState.levelConfig;
 const instructions = `
 <h1>Adventure</h1>
-<p>Copyright &copy; 2025 Johnny Heggelund</p>
+<p>&copy;2025 Johnny Heggelund</p>
 <h2 class="how-to-play-title">📜 How to Play (Level ${gameState.level}) 📜</h2>
 <div class="how-to-play-columns">
 <div class="how-to-play-column">

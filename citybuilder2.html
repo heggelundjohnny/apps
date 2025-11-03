@@ -6,13 +6,18 @@
 <title>City Builder 2</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
+<style>
+@font-face {
+font-family: 'NotoColorEmoji';
+src: url('NotoColorEmoji-Regular.ttf') format('truetype');
+}
 html,
 body {
 margin: 0;
 padding: 0;
 height: 100%;
 overflow: hidden;
-font-family: sans-serif;
+font-family: sans-serif, 'NotoColorEmoji';
 background-color: #1a1a1a;
 color: #f0f0f0;
 }
@@ -116,7 +121,7 @@ border: 1px solid #777;
 box-sizing: border-box;
 text-decoration: none;
 transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+font-family: sans-serif, 'NotoColorEmoji';
 }
 .tool-btn-grid {
 display: grid;
@@ -1156,7 +1161,7 @@ if (!modal) return;
 const modalContent = modal.querySelector('.modal-content');
 if (!modalContent) return;
 modalContent.innerHTML = `<span class="modal-close">&times;</span>
-<h2>How to Play City Builder</h2>
+<h2>How to Play City Builder 2</h2>
 <p>Welcome, Mayor! Your main goal is to build a thriving metropolis and reach a population of <strong>${config.WIN_CONDITION_POPULATION.toLocaleString()}</strong> residents. But be careful – if your city's budget drops below zero, you'll go bankrupt and the game is over!</p>
 <h4>The Basics 💵</h4>
 <ul><li><strong>Income:</strong> Your primary source of income is taxes from houses, income from stores, and profits from industry.</li><li><strong>Tax Level:</strong> Control your tax level! <strong>Low</strong> boosts growth, <strong>High</strong> earns more money but slows growth.</li><li><strong>Expenses:</strong> All buildings and worn roads have an annual maintenance cost.</li></ul>
@@ -1181,7 +1186,7 @@ modalContent.innerHTML = `<span class="modal-close">&times;</span>
 <ul>
 <li><strong>Fires (🔥), Thunderstorms (⛈️), Recessions (📉), King Kong (🦍)</strong> are all dangers!</li>
 </ul>
-<p style="text-align: center; margin-top: 20px;">Good luck, Mayor!</p>`;
+<p style="text-align: center; margin-top: 20px;"><strong>Good luck, Mayor!</strong> &copy;2025 Johnny Heggelund</p>`;
 const closeButton = modalContent.querySelector('.modal-close');
 if (closeButton) {
 closeButton.onclick = () => { modal.style.display = 'none'; };
