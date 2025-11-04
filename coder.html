@@ -278,7 +278,7 @@ helpTitle: "Shortcuts",
 helpOpenFile: "Open File",
 helpSaveFile: "Save File",
 helpNewFile: "New File",
-helpSearchReplace: "Search & Replace",
+helpSearchReplace: "Show/Hide Search & Replace",
 helpToggleHelp: "Show/Hide Help",
 helpCheckWhitespace: "Check Trailing Whitespace",
 helpRemoveEmptyLines: "Remove Empty Lines",
@@ -449,15 +449,9 @@ this.showToast(`Removed ${result.linesRemoved} empty line(s) (outside script)`);
 }
 },
 previewInNewTab() {
-const content = this.elements.editor.value;
-const win = window.open('about:blank', '_blank');
-if (win) {
-win.document.open();
-win.document.write(content);
-win.document.close();
-} else {
-this.showToast("Popup blocked! Please allow popups.");
-}
+const blob = new Blob([this.elements.editor.value], { type: 'text/html' });
+const url = URL.createObjectURL(blob);
+window.open(url, '_blank');
 },
 async openFile() {
 if (this.state.hasUnsavedChanges && !confirm(this.lang.unsavedChangesLost)) return;
