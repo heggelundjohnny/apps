@@ -9,7 +9,7 @@ This entire collection of browser games and tools is licensed under the **MIT Li
 
 Feel free to use, modify, and distribute the code found in this repository, provided that the original copyright and license terms are included.
 
-View the full license text here: [LICENSE](LICENSE.md)
+View the full license text here: [LICENSE](LICENSE)
 
 ---
 
