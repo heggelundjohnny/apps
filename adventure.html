@@ -1,32 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-V2CLS5LW6S"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-V2CLS5LW6S');
-</script>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Adventure</title>
-<meta name="robots" content="noindex">
 <style>
-@font-face {
-font-family: 'NotoColorEmoji';
-src: url('NotoColorEmoji-Regular.ttf') format('truetype');
-}
 body,
 html {
 margin: 0;
 padding: 0;
 overflow: hidden;
-font-family: sans-serif, 'NotoColorEmoji';
+font-family: sans-serif;
 background-color: #1a1a1a;
 display: flex;
 flex-direction: column;
@@ -1104,15 +1088,14 @@ xpNeeded = Math.floor(xpNeeded * 1.5);
 }
 gameState.player.xpForNextStrength = xpNeeded;
 }
-if (!gameState.player.pixelPos) {
+
 gameState.player.pixelPos = {
 x: gameState.player.pos.x * cellSize + cellSize / 2,
 y: gameState.player.pos.y * cellSize + cellSize / 2
 };
-}
+
 const entitiesToUpdate = [...(gameState.monsters || []), ...(gameState.npcs || [])];
 entitiesToUpdate.forEach((m) => {
-if (!m.pixelPos) {
 m.pixelPos = {
 x: m.x * cellSize + cellSize / 2,
 y: m.y * cellSize + cellSize / 2
@@ -1120,8 +1103,8 @@ y: m.y * cellSize + cellSize / 2
 m.targetPixelPos = {
 ...m.pixelPos
 };
-}
 });
+
 gameState.isUnderworld = gameState.level % 5 === 0 && gameState.level < 20;
 gameContainer.style.backgroundColor = gameState.level === 20 ? '#1a001a' : (gameState.isUnderworld ? '#2d2d3a' : '#2E7D32');
 if (gameState.isUnderworld) {
@@ -2717,45 +2700,41 @@ handleNPCInteraction();
 window.addEventListener('keyup', (e) => {
 keysPressed[e.key.toLowerCase()] = false;
 });
+
 window.addEventListener('resize', () => {
 if (!gameState || !mapGrid || !gameState.player || !gameState.player.pixelPos) {
 return;
 }
-const oldCellSize = cellSize;
+
 cellSize = (8 * Math.min(window.innerWidth, window.innerHeight)) / 100;
-if (Math.abs(oldCellSize - cellSize) < 0.01) {
-return;
-}
-const ratio = cellSize / oldCellSize;
-if (gameState.player.pixelPos) {
-gameState.player.pixelPos.x *= ratio;
-gameState.player.pixelPos.y *= ratio;
-}
-(gameState.monsters || []).forEach(m => {
-if (m.pixelPos) { m.pixelPos.x *= ratio; m.pixelPos.y *= ratio; }
-if (m.targetPixelPos) { m.targetPixelPos.x *= ratio; m.targetPixelPos.y *= ratio; }
+
+gameState.player.pixelPos = {
+x: gameState.player.pos.x * cellSize + cellSize / 2,
+y: gameState.player.pos.y * cellSize + cellSize / 2
+};
+
+const allEntities = [...(gameState.monsters || []), ...(gameState.npcs || [])];
+allEntities.forEach(entity => {
+entity.pixelPos = {
+x: entity.x * cellSize + cellSize / 2,
+y: entity.y * cellSize + cellSize / 2
+};
+entity.targetPixelPos = { ...entity.pixelPos };
 });
-(gameState.npcs || []).forEach(n => {
-if (n.pixelPos) { n.pixelPos.x *= ratio; n.pixelPos.y *= ratio; }
-if (n.targetPixelPos) { n.targetPixelPos.x *= ratio; n.targetPixelPos.y *= ratio; }
-});
-(gameState.activeProjectiles || []).forEach(p => {
-p.x *= ratio;
-p.y *= ratio;
-p.maxDistance *= ratio;
-if (p.el) {
-const newSize = cellSize / 4;
-p.el.style.left = `${p.x - newSize}px`;
-p.el.style.top = `${p.y - newSize}px`;
+
+if (gameState.activeProjectiles) {
+ gameState.activeProjectiles.forEach(p => p.el.remove());
+ gameState.activeProjectiles = [];
 }
-});
+
 mapGrid.innerHTML = '';
 visibleCellElements = {};
 visibleMonsterElements = {};
 visibleNpcElements = {};
-updateVisibleCells(false);
+updateVisibleCells(true);
 render();
 });
+
 saveGameButton.addEventListener('click', saveGame);
 howToPlayButton.addEventListener('click', showHowToPlay);
 if (!loadGame()) {
