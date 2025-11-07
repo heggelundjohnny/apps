@@ -1,21 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-V2CLS5LW6S"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-V2CLS5LW6S');
-</script>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Adventure</title>
-<meta name="robots" content="noindex">
 <style>
 body,
 html {
@@ -1709,21 +1697,36 @@ shootCrossbow(clickX, clickY);
 }
 });
 }
+
 function updateVisibleCells(forceRedraw = false) {
 const pPos = gameState.player.pos;
 const renderDistX = Math.ceil(gameContainer.clientWidth / cellSize / 2) + 1;
 const renderDistY = Math.ceil(gameContainer.clientHeight / cellSize / 2) + 1;
 const newVisible = {};
 const pathTile = gameState.isUnderworld ? TILE.UW_PATH : TILE.PATH;
+
 for (let y = pPos.y - renderDistY; y <= pPos.y + renderDistY; y++) {
 for (let x = pPos.x - renderDistX; x <= pPos.x + renderDistX; x++) {
-if (x < 0 || x >= WORLD_SIZE.cols || y < 0 || y >= WORLD_SIZE.rows) continue;
+
 const cellId = `cell-${x}-${y}`;
 newVisible[cellId] = true;
+
 if (!visibleCellElements[cellId] || forceRedraw) {
 if (forceRedraw && visibleCellElements[cellId]) {
 visibleCellElements[cellId].remove();
 }
+
+const cell = document.createElement('div');
+cell.className = 'cell';
+cell.dataset.cellId = cellId;
+cell.style.left = `${x * cellSize}px`;
+cell.style.top = `${y * cellSize}px`;
+
+if (x < 0 || x >= WORLD_SIZE.cols || y < 0 || y >= WORLD_SIZE.rows) {
+cell.style.backgroundColor = '#000000';
+cell.textContent = '';
+} else {
+
 const monsterAtPos = gameState.monsters.find((m) => m.x === x && m.y === y && !m.isDying);
 const npcAtPos = gameState.npcs.find((n) => n.x === x && n.y === y);
 let displayTile = gameState.world[y][x];
@@ -1740,21 +1743,23 @@ displayTile = (gameState.world[y][x] === pathTile) ? pathTile : TILE.EMPTY;
 if (displayTile === TILE.WATER) {
 displayTile = TILE.EMPTY;
 }
-const cell = document.createElement('div');
-cell.className = 'cell';
-cell.dataset.cellId = cellId;
+
 cell.textContent = displayTile;
-cell.style.left = `${x * cellSize}px`;
-cell.style.top = `${y * cellSize}px`;
+
 if (gameState.world[y][x] === TILE.WATER) {
 cell.style.backgroundColor = '#42a5f5';
+} else {
+cell.style.backgroundColor = 'transparent';
 }
 updateCellClass(cell, displayTile);
+}
+
 mapGrid.appendChild(cell);
 visibleCellElements[cellId] = cell;
 }
 }
 }
+
 for (const cellId in visibleCellElements) {
 if (!newVisible[cellId]) {
 visibleCellElements[cellId].remove();
@@ -1762,6 +1767,7 @@ delete visibleCellElements[cellId];
 }
 }
 }
+
 function render() {
 if (!gameState || gameState.isGameOver) {
 if (playerElement) {
