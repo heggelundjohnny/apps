@@ -17,12 +17,10 @@
 <title>Adventure</title>
 <meta name="robots" content="noindex">
 <style>
-
 @font-face {
 font-family: 'NotoColorEmoji';
 src: url('NotoColorEmoji-Regular.ttf') format('truetype');
 }
-
 body,
 html {
 margin: 0;
@@ -2043,7 +2041,7 @@ showMessage("The door is locked! You need a key 🔑.");
 }
 } else if (x === gameState.keyPos.x && y === gameState.keyPos.y && !gameState.player.hasKey) {
 gameState.player.hasKey = true;
-updateCell(x, y, gameState.world[y][x]);
+updateCell(x, y, TILE.EMPTY);
 showMessage("You found the key! 🔑 Now find the door 🚪!");
 updateHUD();
 } else {
