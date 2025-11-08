@@ -50,6 +50,8 @@ border-radius: 8px;
 position: relative;
 }
 #ui-panel {
+font-family: sans-serif;
+color: #fff;
 width: 280px;
 flex-shrink: 0;
 height: 100%;
@@ -546,10 +548,10 @@ scrollbar-color: #007bff #2c2c2c;
 <button class="tool-btn" data-tool="industry" title="Industry">🏭 $12k</button>
 <button class="tool-btn" data-tool="road" title="Road">➖ $25</button>
 <button class="tool-btn" data-tool="park" title="Park">🌳 $450</button>
-<button class="tool-btn" data-tool="power-plant" title="Power Plant">⚡️ $10k</button>
+    <button class="tool-btn" data-tool="power-plant" title="Power Plant">⚡️ $8k</button>
 <button class="tool-btn" data-tool="power-line" title="Power Line">🔌 $50</button>
-<button class="tool-btn" data-tool="police-station" title="Police Station">🚓 $15k</button>
-<button class="tool-btn" data-tool="fire-station" title="Fire Station">🚒 $17k</button>
+    <button class="tool-btn" data-tool="police-station" title="Police Station">🚓 $10k</button>
+    <button class="tool-btn" data-tool="fire-station" title="Fire Station">🚒 $12k</button>
 <button class="tool-btn" data-tool="school" title="School">🏫 $12k</button>
 <button class="tool-btn" data-tool="stadium" title="Stadium">🏟️ $65k</button>
 <button class="tool-btn" data-tool="airport" title="Airport">✈️ $80k</button>
@@ -615,9 +617,9 @@ MAX_LOG_ENTRIES: 100,
 POWER_PLANT_CAPACITY: 800,
 AIRPORT_INCOME_PER_CITIZEN: 0.25,
 CUSTOMER_RADIUS: 6,
-INCOME_PER_PERSON: 0.2,
+    INCOME_PER_PERSON: 1.5,
 ROAD_MAINTENANCE_PER_WEAR: 5,
-INDUSTRY_INCOME: 2000,
+    INDUSTRY_INCOME: 1600,
 costs: {
 house: 700,
 store: 900,
@@ -625,10 +627,10 @@ industry: 12000,
 park: 450,
 stadium: 65000,
 airport: 80000,
-'power-plant': 10000,
+    'power-plant': 8000,
 'power-line': 50,
-'police-station': 15000,
-'fire-station': 17000,
+    'police-station': 10000,
+    'fire-station': 12000,
 school: 12000,
 bulldoze: 50,
 road: 25,
@@ -1221,24 +1223,46 @@ const netHtml = `<h3>Annual Net Result: <strong class="${netProfit >= 0 ? 'text-
 economyDetails.innerHTML = netHtml + incomeHtml + expenseHtml;
 modal.style.display = 'flex';
 }
+
+
 function simulatePollution() {
-for (let i = 0; i < pollutionGrid.length; i++) {
-if (pollutionGrid[i] > 0) {
-pollutionGrid[i] = Math.max(0, pollutionGrid[i] - 1);
-}
-}
-for (const index of industrialZones) {
-const cell = world[index];
-if (cell && cell.building?.powered) {
-pollutionGrid[index] = Math.min(255, pollutionGrid[index] + 40);
-getNeighbors(index, 6).forEach((nIndex) => {
-if (nIndex >= 0 && nIndex < pollutionGrid.length) {
-pollutionGrid[nIndex] = Math.min(255, pollutionGrid[nIndex] + 5);
-}
-});
-}
-}
-}
+    // 1. All forurensning reduseres litt over tid (Eksisterende kode)
+    for (let i = 0; i < pollutionGrid.length; i++) {
+        if (pollutionGrid[i] > 0) {
+            pollutionGrid[i] = Math.max(0, pollutionGrid[i] - 1);
+        }
+    }
+
+    // 2. Industrisoner skaper og sprer forurensning (Eksisterende kode)
+    for (const index of industrialZones) {
+        const cell = world[index];
+        if (cell && cell.building?.powered) {
+            pollutionGrid[index] = Math.min(255, pollutionGrid[index] + 40);
+            getNeighbors(index, 6).forEach((nIndex) => {
+                if (nIndex >= 0 && nIndex < pollutionGrid.length) {
+                    pollutionGrid[nIndex] = Math.min(255, pollutionGrid[nIndex] + 5);
+                }
+            });
+        }
+    } // <-- Loopen for industri slutter her
+
+    // 3. Parker renser luften aktivt (Ny kode)
+    // Denne skal være ETTER industri-loopen, men INNI funksjonen
+    world.forEach((cell, index) => {
+        if (cell && cell.building?.type === 'park' && cell.building.powered) {
+            const cleanRadius = 3;
+            const cleanAmount = 3;
+            getNeighbors(index, cleanRadius).forEach((nIndex) => {
+                if (nIndex >= 0 && nIndex < pollutionGrid.length) {
+                    pollutionGrid[nIndex] = Math.max(0, pollutionGrid[nIndex] - cleanAmount);
+                }
+            });
+        }
+    });
+
+} // <-- simulatePollution-funksjonen slutter her
+
+
 function getEconomyData(isRecession = false) {
 const incomeSources = {
 houses: { count: 0, totalIncome: 0 }, stores: { count: 0, totalIncome: 0 },
@@ -1252,9 +1276,10 @@ industry: { count: 0, totalMaintenance: 0 }, park: { count: 0, totalMaintenance:
 stadium: { count: 0, totalMaintenance: 0 }, airport: { count: 0, totalMaintenance: 0 },
 road: { count: 0, totalMaintenance: 0 }, total: 0,
 };
-const baseMaintenanceRate = 0.035;
-const scalingFactor = Math.pow((world.length / 10000) * 50000 / 70000, 2);
-const maintenanceRate = baseMaintenanceRate + (scalingFactor * 0.15);
+
+    // Sett en enkel, flat rate foreløpig.
+    const maintenanceRate = 0.035; // (Dvs. 3.5%)
+
 let currentPopulation = 0;
 world.forEach((cell, index) => {
 if (!cell) return;
@@ -1334,13 +1359,13 @@ const parkAndRoadBonus = (hasPark ? 1.0 : 0) + (hasRoad ? 1.5 : 0) + (hasPark &&
 const schoolBonus = getNeighbors(index, 15).some((n) => world[n]?.building?.type === 'school' && world[n].building.powered) ? 4 : 0;
 const stadiumBonus = getNeighbors(index, 20).some((n) => world[n]?.building?.type === 'stadium' && world[n].building.powered) ? 12 : 0;
 const lakeBonus = getNeighbors(index, 1).some((n) => world[n]?.base === 'lake') ? 3.5 : 0;
-const crimePenalty = cell.crimeLevel > 0 && cell.building.population >= 30 ? -15 : 0;
+const crimePenalty = cell.crimeLevel > 0 && cell.building.population >= 30 ? -5 : 0;
 let taxBonus = 0;
-if (taxRate < 0.6) taxBonus = 2;
-if (taxRate > 0.8) taxBonus = -25;
-const randomFactor = Math.random() * 0.08;
+    if (taxRate < 0.6) taxBonus = 5;
+    if (taxRate > 0.8) taxBonus = -5;
+const randomFactor = 0.5 + (Math.random() * 0.5);
 let growth = randomFactor + parkAndRoadBonus + schoolBonus + stadiumBonus + lakeBonus + taxBonus + crimePenalty + pollutionPenalty;
-if (pollution > 80) growth = Math.min(growth, -10);
+if (pollution > 80) growth = Math.min(growth, -2);
 cell.building.population += growth;
 cell.building.population = Math.max(0, Math.min(cell.building.population, 150));
 } else {
@@ -1484,37 +1509,49 @@ world[index].building.powered = true;
 plant.powerLoad = poweredByThisPlant.size;
 });
 }
+
+
 function updateRoadWear() {
-world.forEach((cell, i) => {
-if (!cell) return;
-if (cell.base === 'road') {
-let nearbyPop = 0;
-getNeighbors(i, 2).forEach((nIndex) => {
-const nCell = world[nIndex];
-if (nCell?.building?.type === 'house' && nCell.building.population) {
-nearbyPop += nCell.building.population;
+    world.forEach((cell, i) => {
+        if (!cell) return;
+
+        if (cell.base === 'road') {
+            let nearbyPop = 0;
+            getNeighbors(i, 2).forEach((nIndex) => {
+                const nCell = world[nIndex];
+                if (nCell?.building?.type === 'house' && nCell.building.population) {
+                    nearbyPop += nCell.building.population;
+                }
+            });
+
+            cell.hasTraffic = nearbyPop > 50;
+
+            if (nearbyPop > 800) cell.roadWear = 3;
+            else if (nearbyPop > 300) cell.roadWear = 2;
+            else if (nearbyPop > 100) cell.roadWear = 1;
+            else {
+                // Veien har lite trafikk, reparer den sakte
+                cell.roadWear = Math.max(0, cell.roadWear - 1);
+            }
+        } else {
+            // Hvis det IKKE er en vei
+            cell.hasTraffic = false;
+        }
+    });
 }
-});
-cell.hasTraffic = nearbyPop > 50;
-if (nearbyPop > 800) cell.roadWear = 3;
-else if (nearbyPop > 300) cell.roadWear = 2;
-else if (nearbyPop > 100) cell.roadWear = 1;
-else cell.roadWear = 0;
-} else {
-cell.hasTraffic = false;
-}
-});
-}
+
+
+
 function handleRepairs(logFn) {
 world.forEach((cell) => {
-if (cell?.building?.type === 'power-plant' && cell.building.isDamaged && Math.random() < 0.25) {
+if (cell?.building?.type === 'power-plant' && cell.building.isDamaged && Math.random() < 0.75) {
 cell.building.isDamaged = false;
 logFn("🛠️ A damaged power plant is now fully repaired!");
 }
 });
 }
 function updateCrimeLevels(logFn, year) {
-if (year < 2100) {
+if (gameState.population < 5000) {
 world.forEach((cell) => { if (cell) cell.crimeLevel = 0; });
 return;
 }
