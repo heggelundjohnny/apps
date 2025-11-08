@@ -599,6 +599,295 @@ class="hud-value">0</span> </div>
 </div>
 </div>
 <script>
+
+
+const audioManager = {
+    context: null,
+    isInitialized: false,
+    mainGain: null,
+    activeAmbiance: {}, // For å holde styr på loops (f.eks. vind)
+    birdChirpTimer: null, // NY EGENSKAP (Denne var på feil sted)
+
+    /**
+     * VIKTIG: Denne MÅ kalles etter at brukeren har interagert
+     * (klikket eller trykket en tast) for at lyd skal fungere i moderne nettlesere.
+     */
+    init: function() {
+        if (this.isInitialized) return;
+        
+        try {
+            this.context = new (window.AudioContext || window.webkitAudioContext)();
+            this.mainGain = this.context.createGain();
+            this.mainGain.connect(this.context.destination);
+            this.mainGain.gain.setValueAtTime(1.0, this.context.currentTime); // Globalt volum 100%
+            
+            this.isInitialized = true;
+            console.log("Audio Context er initialisert.");
+        } catch (e) {
+            console.error("Web Audio API støttes ikke i denne nettleseren.", e);
+        }
+    },
+
+    /**
+     * Lydbiblioteket. Hver funksjon er en "oppskrift" på en lyd.
+     * De tar inn (ctx, dest) = AudioContext og destinasjonen (vår mainGain).
+     */
+    sounds: {
+        /**
+         * En kort "hugg"-lyd for trær.
+         */
+        'tree_chop': (ctx, dest) => {
+            const bufferSize = ctx.sampleRate * 0.1; // 0.1 sekund
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1; // Hvit støy
+            }
+
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1000, ctx.currentTime);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1); // Rask fade-out
+
+            noise.connect(filter).connect(gain).connect(dest);
+            noise.start(ctx.currentTime);
+            noise.stop(ctx.currentTime + 0.1);
+        },
+
+        /**
+         * En positiv "pling" for å plukke opp ting.
+         */
+        'item_pickup': (ctx, dest) => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.1);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+
+            osc.connect(gain).connect(dest);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.1);
+        },
+
+        /**
+         * Atmosfærisk vind.
+         */
+        'wind_ambiance': (ctx, dest) => {
+            const bufferSize = 2 * ctx.sampleRate; // 2 sekunder med støy
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = (Math.random() * 2 - 1) * 0.3; // Brun støy (simulert)
+                if (i > 0) output[i] = (output[i-1] + (0.02 * output[i])) / 1.02;
+            }
+
+            const noiseNode = ctx.createBufferSource();
+            noiseNode.buffer = buffer;
+            noiseNode.loop = true;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(300, ctx.currentTime); // Base "hush"
+            filter.Q.setValueAtTime(10, ctx.currentTime);
+
+            const lfo = ctx.createOscillator(); // Den som lager "whoosh"-effekten
+            lfo.type = 'sine';
+            lfo.frequency.setValueAtTime(0.1, ctx.currentTime); // Veldig treg "whoosh"
+
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.setValueAtTime(150, ctx.currentTime); // Hvor mye filteret skal endre seg
+
+            lfo.connect(lfoGain).connect(filter.frequency);
+            noiseNode.connect(filter).connect(dest);
+
+            lfo.start(ctx.currentTime);
+            noiseNode.start(ctx.currentTime);
+
+            // Returner nodene slik at vi kan stoppe dem senere
+            return { lfo, noiseNode };
+        }, // <-- SLUTT PÅ WIND_AMBIANCE, MEN IKKE PÅ SOUNDS-OBJEKTET
+
+        // *** FIKS 1: FUGLELYDENE SKAL INN HER ***
+        /**
+         * Fuglekvitter 1: En enkel "pew-pew"
+         */
+// ... i audioManager.sounds objektet ...
+
+        // NYE, FORBEDREDE FUGLELYDER:
+        /**
+         * Fuglekvitter 1: En kort "tweet"
+         */
+        'bird_chirp_1': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle'; // Mykere enn 'sine'
+            osc.frequency.setValueAtTime(3500, t);
+            osc.frequency.linearRampToValueAtTime(2800, t + 0.08); // Rask frekvens-sveip nedover
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t); // Start på 0
+            gain.gain.linearRampToValueAtTime(0.08, t + 0.01); // Rask fade-in (mykt anslag)
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08); // Fade ut
+
+            osc.connect(gain).connect(dest);
+            osc.start(t);
+            osc.stop(t + 0.08);
+        },
+        
+        /**
+         * Fuglekvitter 2: En dobbel "ti-ti"
+         */
+        'bird_chirp_2': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            
+            // Første "ti"
+            osc.frequency.setValueAtTime(3000, t);
+            osc.frequency.linearRampToValueAtTime(3300, t + 0.05);
+            // Andre "ti"
+            osc.frequency.linearRampToValueAtTime(3100, t + 0.06);
+            osc.frequency.linearRampToValueAtTime(3400, t + 0.1);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.07, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+            osc.connect(gain).connect(dest);
+            osc.start(t);
+            osc.stop(t + 0.1);
+        },
+
+        /**
+         * Fuglekvitter 3: En litt lenger "kvit-kvit-kvit" (trille)
+         */
+        'bird_chirp_3': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(4000, t); // Høy start
+
+            // Rask vibrato (trille)
+            const lfo = ctx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.setValueAtTime(30, t); // 30 Hz vibrato
+
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.setValueAtTime(100, t); // Hvor mye frekvensen skal endre seg
+
+            lfo.connect(lfoGain).connect(osc.frequency); // Koble LFO til frekvensen
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.06, t + 0.02); // Litt lenger fade-in
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15); // Lenger lyd
+
+            osc.connect(gain).connect(dest);
+            lfo.start(t);
+            osc.start(t);
+            lfo.stop(t + 0.15);
+            osc.stop(t + 0.15);
+        }
+    }, // <-- *** DENNE LUKKER 'sounds'-OBJEKTET NÅ ***
+
+
+    /**
+     * Spiller en kort "one-shot" lydeffekt.
+     */
+    playSound: function(name) {
+        if (!this.isInitialized) this.init(); 
+        if (!this.isInitialized || !this.sounds[name]) return;
+
+        this.sounds[name](this.context, this.mainGain);
+    },
+
+    /**
+     * Starter en loopende atmosfære-lyd.
+     */
+    startAmbiance: function(name) {
+        if (!this.isInitialized) this.init();
+        if (!this.isInitialized || !this.sounds[name] || this.activeAmbiance[name]) return;
+
+        console.log('Starter atmosfære:', name);
+        const gain = this.context.createGain();
+        gain.connect(this.mainGain);
+        gain.gain.setValueAtTime(0, this.context.currentTime);
+        gain.gain.linearRampToValueAtTime(0.4, this.context.currentTime + 3); // Fade inn
+
+        const nodes = this.sounds[name](this.context, gain);
+        this.activeAmbiance[name] = { ...nodes, gainNode: gain };
+    },
+
+    /**
+     * Stopper en loopende atmosfære-lyd.
+     */
+    stopAmbiance: function(name) {
+        if (!this.isInitialized || !this.activeAmbiance[name]) return;
+        
+        console.log('Stopper atmosfære:', name);
+        const nodes = this.activeAmbiance[name];
+
+        const fadeTime = this.context.currentTime + 2;
+        nodes.gainNode.gain.cancelScheduledValues(this.context.currentTime);
+        nodes.gainNode.gain.linearRampToValueAtTime(0.001, fadeTime);
+
+        setTimeout(() => {
+            if (nodes.noiseNode) nodes.noiseNode.stop();
+            if (nodes.lfo) nodes.lfo.stop();
+            nodes.gainNode.disconnect();
+        }, 2100);
+
+        delete this.activeAmbiance[name];
+    }, // <-- SLUTT PÅ STOPAMBIANCE, MEN IKKE PÅ AUDIOMANAGER
+
+    // *** FIKS 2: FUGLE-FUNKSJONENE SKAL INN HER ***
+    /**
+     * Starter den tilfeldige avspillingen av fuglelyder.
+     */
+    startBirdSounds: function() {
+        if (!this.isInitialized || this.birdChirpTimer) return; 
+
+        console.log("Starter fuglelyder...");
+        const birdSounds = ['bird_chirp_1', 'bird_chirp_2', 'bird_chirp_3'];
+        
+        const loop = () => {
+            const randomDelay = Math.random() * 10000 + 5000; 
+            
+            this.birdChirpTimer = setTimeout(() => {
+                if (!this.isInitialized) return;
+
+                const soundName = birdSounds[Math.floor(Math.random() * birdSounds.length)];
+                this.playSound(soundName);
+                
+                loop(); 
+            }, randomDelay);
+        };
+        
+        loop(); 
+    },
+
+    /**
+     * Stopper avspillingen av fuglelyder.
+     */
+    stopBirdSounds: function() {
+        if (this.birdChirpTimer) {
+            console.log("Stopper fuglelyder...");
+            clearTimeout(this.birdChirpTimer);
+            this.birdChirpTimer = null;
+        }
+    }
+}; // <-- *** DENNE LUKKER 'audioManager'-OBJEKTET NÅ ***
+
 document.addEventListener('DOMContentLoaded', () => {
 const WORLD_SIZE = {
 rows: 150,
@@ -1011,8 +1300,22 @@ const isUnderworld = currentLevel % 5 === 0 && currentLevel < 20;
 gameContainer.style.backgroundColor = isUnderworld ? '#2d2d3a' : '#2E7D32';
 if (isUnderworld) {
 initRainEffect(100);
+
+audioManager.stopAmbiance('wind_ambiance');
+audioManager.stopBirdSounds();
+
+
+
+
 } else {
 stopRainEffect();
+
+audioManager.startAmbiance('wind_ambiance');
+audioManager.startBirdSounds();
+
+
+
+
 }
 nightOverlay.classList.remove('is-night');
 gameState = {
@@ -1185,6 +1488,20 @@ nightOverlay.classList.add('is-night');
 } else {
 nightOverlay.classList.remove('is-night');
 }
+
+if (gameState.timeOfDay === 'day' && !gameState.isUnderworld && gameState.level !== 20) {
+
+
+
+
+audioManager.startAmbiance('wind_ambiance');
+audioManager.startBirdSounds();
+
+
+
+
+    }
+
 gameLoopInterval = setInterval(gameTick, 1000);
 lastFrameTime = performance.now();
 mainGameLoopId = requestAnimationFrame(mainGameLoop);
@@ -1201,6 +1518,10 @@ showMessage(`Congratulations! You reached level ${gameState.level + 1}! The chal
 }
 function gameOver() {
 gameState.isGameOver = true;
+
+audioManager.stopAmbiance('wind_ambiance');
+audioManager.stopBirdSounds();
+
 clearInterval(gameLoopInterval);
 cancelAnimationFrame(mainGameLoopId);
 showMessage("GAME OVER 💀<br>Loading last save...", () => {
@@ -1211,6 +1532,10 @@ window.location.reload();
 }
 function gameWon() {
 gameState.isGameOver = true;
+
+audioManager.stopAmbiance('wind_ambiance');
+audioManager.stopBirdSounds();
+
 clearInterval(gameLoopInterval);
 cancelAnimationFrame(mainGameLoopId);
 localStorage.removeItem('adventureGameSaveData');
@@ -2037,6 +2362,9 @@ gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + ite
 updateCell(x, y, TILE.EMPTY);
 updateHUD();
 showPlayerStatusBar();
+
+audioManager.playSound('item_pickup');
+
 } else {
 showMessage("You are at full health and don't need food right now.");
 }
@@ -2067,6 +2395,12 @@ if (gameState.player.hp <= GATHER_HP_COST) {
 showMessage("You are too weak to gather resources!");
 return;
 }
+
+// NY LINJE: Spill "hugg"-lyd
+    if (resource.type === 'tree') {
+        audioManager.playSound('tree_chop');
+    }
+
 resource.hits++;
 cellElement.classList.add('shaking');
 setTimeout(() => cellElement.classList.remove('shaking'), 150);
@@ -2707,6 +3041,10 @@ const wasDay = gameState.timeOfDay === 'day';
 if (wasDay && timeInCycle >= DAY_DURATION) {
 gameState.timeOfDay = 'night';
 nightOverlay.classList.add('is-night');
+
+audioManager.stopAmbiance('wind_ambiance');
+audioManager.stopBirdSounds();
+
 gameState.monsters.forEach((m) => {
 m.currentStrength = Math.floor(m.baseStrength * NIGHT_STRENGTH_BONUS);
 });
@@ -2714,6 +3052,14 @@ spawnGhosts();
 } else if (!wasDay && timeInCycle < DAY_DURATION) {
 gameState.timeOfDay = 'day';
 nightOverlay.classList.remove('is-night');
+
+if (!gameState.isUnderworld) {
+
+audioManager.startAmbiance('wind_ambiance');
+audioManager.startBirdSounds();
+
+        }
+
 gameState.monsters.forEach((m) => {
 m.currentStrength = m.baseStrength;
 });
@@ -2879,6 +3225,12 @@ keysPressed['d'] = false;
 setTimeout(forceInitialDraw, 50);
 }
 }
+
+
+document.body.addEventListener('click', () => audioManager.init(), { once: true });
+document.body.addEventListener('keydown', () => audioManager.init(), { once: true });
+
+
 forceInitialDraw();
 });
 </script>
