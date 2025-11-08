@@ -601,12 +601,14 @@ class="hud-value">0</span> </div>
 <script>
 
 
+
 const audioManager = {
     context: null,
     isInitialized: false,
     mainGain: null,
     activeAmbiance: {}, // For å holde styr på loops (f.eks. vind)
     birdChirpTimer: null,
+    soundCooldowns: {}, // For å "strupe" lyder
 
     init: function() {
         if (this.isInitialized) return;
@@ -743,50 +745,72 @@ const audioManager = {
             osc.start(t);
             osc.stop(t + 0.1);
         },
-        
-        // NY LYD: 'player_attack_sword'
         'player_attack_sword': (ctx, dest) => {
             const t = ctx.currentTime;
             const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-            
             const noise = ctx.createBufferSource();
             noise.buffer = buffer;
-            
             const filter = ctx.createBiquadFilter();
-            filter.type = 'bandpass'; // En "tynn" lyd
+            filter.type = 'bandpass';
             filter.frequency.setValueAtTime(1500, t);
             filter.Q.setValueAtTime(10, t);
-
             const gain = ctx.createGain();
             gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.3, t + 0.01); // Rask "swoosh"
+            gain.gain.linearRampToValueAtTime(0.3, t + 0.01);
             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-            
             noise.connect(filter).connect(gain).connect(dest);
             noise.start(t);
             noise.stop(t + 0.15);
         },
-
-        // NY LYD: 'player_attack_sledge'
         'player_attack_sledge': (ctx, dest) => {
             const t = ctx.currentTime;
             const osc = ctx.createOscillator();
             osc.type = 'square';
-            osc.frequency.setValueAtTime(120, t); // Tyngre
-            osc.frequency.exponentialRampToValueAtTime(80, t + 0.15); // Faller mer
-
+            osc.frequency.setValueAtTime(120, t);
+            osc.frequency.exponentialRampToValueAtTime(80, t + 0.15);
             const gain = ctx.createGain();
             gain.gain.setValueAtTime(0, t);
             gain.gain.linearRampToValueAtTime(0.4, t + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15); // Lenger lyd
-
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
             osc.connect(gain).connect(dest);
             osc.start(t);
             osc.stop(t + 0.15);
         },
-
+        'arrow_shoot_swoosh': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(3000, t);
+            filter.Q.setValueAtTime(5, t);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.3, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+            noise.connect(filter).connect(gain).connect(dest);
+            noise.start(t);
+            noise.stop(t + 0.2);
+        },
+        'arrow_hit_thud': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(100, t + 0.08);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.5, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+            osc.connect(gain).connect(dest);
+            osc.start(t);
+            osc.stop(t + 0.08);
+        },
         'monster_die_xp': (ctx, dest) => {
             const t = ctx.currentTime;
             const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
@@ -815,13 +839,106 @@ const audioManager = {
             osc.connect(xpGain).connect(dest);
             osc.start(t + 0.1);
             osc.stop(t + 0.2);
+        },
+        'player_walk': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(400, t); 
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.1, t + 0.01); 
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08); 
+            noise.connect(filter).connect(gain).connect(dest);
+            noise.start(t);
+            noise.stop(t + 0.08);
+        },
+
+        // --- NYE LYDER ---
+        'gather_stone': (ctx, dest) => {
+            const t = ctx.currentTime;
+            // En skarp "klikk"-lyd
+            const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'highpass'; // Motsatt av "tasselyden"
+            filter.frequency.setValueAtTime(1500, t); // Høy frekvens for "klikk"
+            
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+            
+            noise.connect(filter).connect(gain).connect(dest);
+            noise.start(t);
+            noise.stop(t + 0.05);
+        },
+        'gather_gem': (ctx, dest) => {
+            const t = ctx.currentTime;
+            // En høy, "klingende" tone
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(2000, t);
+            osc.frequency.linearRampToValueAtTime(2500, t + 0.1);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            
+            osc.connect(gain).connect(dest);
+            osc.start(t);
+            osc.stop(t + 0.1);
+        },
+        'gather_herb': (ctx, dest) => {
+            const t = ctx.currentTime;
+            // Hvit støy for "rasling"
+            const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass'; // Bare et tynt bånd av støy
+            filter.frequency.setValueAtTime(2500, t);
+            filter.Q.setValueAtTime(10, t);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.15, t); // Ganske lavt volum
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            
+            noise.connect(filter).connect(gain).connect(dest);
+            noise.start(t);
+            noise.stop(t + 0.1);
         }
+        // --- SLUTT PÅ NYE LYDER ---
+
     },
 
     playSound: function(name) {
         if (!this.isInitialized) this.init(); 
         if (!this.isInitialized || !this.sounds[name]) return;
         this.sounds[name](this.context, this.mainGain);
+    },
+    
+    playSoundThrottled: function(name, delay) {
+        if (!this.isInitialized || this.soundCooldowns[name]) {
+            return;
+        }
+        this.playSound(name);
+        this.soundCooldowns[name] = true;
+        setTimeout(() => {
+            this.soundCooldowns[name] = false;
+        }, delay);
     },
 
     startAmbiance: function(name) {
@@ -875,6 +992,9 @@ const audioManager = {
         }
     }
 };
+
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
 const WORLD_SIZE = {
@@ -2442,43 +2562,59 @@ return;
 }
 }
 }
-function gatherResource(resource, cellElement) {
-if (gameState.player.hp <= GATHER_HP_COST) {
-showMessage("You are too weak to gather resources!");
-return;
-}
 
-// NY LINJE: Spill "hugg"-lyd
-    if (resource.type === 'tree') {
-        audioManager.playSound('tree_chop');
+
+
+function gatherResource(resource, cellElement) {
+    if (gameState.player.hp <= GATHER_HP_COST) {
+        showMessage("You are too weak to gather resources!");
+        return;
     }
 
-resource.hits++;
-cellElement.classList.add('shaking');
-setTimeout(() => cellElement.classList.remove('shaking'), 150);
-if (resource.hits >= GATHERING_HITS) {
-let replacementTile = TILE.EMPTY;
-if (resource.type === 'tree') {
-gameState.player.wood += WOOD_PER_TREE;
-showMessage(`+${WOOD_PER_TREE} 🪵, -${GATHER_HP_COST} ❤️`);
-replacementTile = TILE.DECOR_1;
-} else if (resource.type === 'stone') {
-gameState.player.stone += STONE_PER_ROCK;
-showMessage(`+${STONE_PER_ROCK} 🪨, -${GATHER_HP_COST} ❤️`);
-} else if (resource.type === 'gem') {
-gameState.player.gems += GEM_PER_ROCK;
-showMessage(`+${GEM_PER_ROCK} 💎, -${GATHER_HP_COST} ❤️`);
-} else if (resource.type === 'herb') {
-gameState.player.herbs += HERB_PER_PLANT;
-showMessage(`+${HERB_PER_PLANT} 🌿, -${GATHER_HP_COST} ❤️`);
+    // --- OPPDATERT LYD-LOGIKK ---
+    // Spill lyd basert på ressurs-type
+    if (resource.type === 'tree') {
+        audioManager.playSound('tree_chop');
+    } else if (resource.type === 'stone') {
+        audioManager.playSound('gather_stone');
+    } else if (resource.type === 'gem') {
+        audioManager.playSound('gather_gem');
+    } else if (resource.type === 'herb') {
+        audioManager.playSound('gather_herb');
+    }
+    // --- SLUTT PÅ LYD-LOGIKK ---
+
+    resource.hits++;
+    cellElement.classList.add('shaking');
+    setTimeout(() => cellElement.classList.remove('shaking'), 150);
+    
+    if (resource.hits >= GATHERING_HITS) {
+        let replacementTile = TILE.EMPTY;
+        if (resource.type === 'tree') {
+            gameState.player.wood += WOOD_PER_TREE;
+            showMessage(`+${WOOD_PER_TREE} 🪵, -${GATHER_HP_COST} ❤️`);
+            replacementTile = TILE.DECOR_1;
+        } else if (resource.type === 'stone') {
+            gameState.player.stone += STONE_PER_ROCK;
+            showMessage(`+${STONE_PER_ROCK} 🪨, -${GATHER_HP_COST} ❤️`);
+        } else if (resource.type === 'gem') {
+            gameState.player.gems += GEM_PER_ROCK;
+            showMessage(`+${GEM_PER_ROCK} 💎, -${GATHER_HP_COST} ❤️`);
+        } else if (resource.type === 'herb') {
+            gameState.player.herbs += HERB_PER_PLANT;
+            showMessage(`+${HERB_PER_PLANT} 🌿, -${GATHER_HP_COST} ❤️`);
+        }
+        gameState.player.hp -= GATHER_HP_COST;
+        updateCell(resource.x, resource.y, replacementTile);
+        gameState.resources = gameState.resources.filter((r) => r !== resource);
+        updateHUD();
+        showPlayerStatusBar();
+    }
 }
-gameState.player.hp -= GATHER_HP_COST;
-updateCell(resource.x, resource.y, replacementTile);
-gameState.resources = gameState.resources.filter((r) => r !== resource);
-updateHUD();
-showPlayerStatusBar();
-}
-}
+
+
+
+
 function buildShelter() {
 if (gameState.isFighting) return;
 const costs = gameState.levelConfig;
@@ -2697,6 +2833,9 @@ if (gameState.player.arrows <= 0) {
 showMessage("You're out of arrows!");
 return;
 }
+
+audioManager.playSound('arrow_shoot_swoosh');
+
 const pPos = gameState.player.pixelPos;
 const dx = targetMapX - pPos.x;
 const dy = targetMapY - pPos.y;
@@ -2740,6 +2879,10 @@ const gridY = Math.floor(p.y / cellSize);
 const monster = gameState.monsters.find((m) => !m.isDying && m.x === gridX && m.y === gridY);
 if (monster && monster.tile !== TILE.SWAN) {
 hit = true;
+
+audioManager.playSound('arrow_hit_thud');
+
+
 let damage = CROSSBOW_BASE_DAMAGE + Math.floor(gameState.player.strength / CROSSBOW_STRENGTH_DAMAGE_FACTOR);
 if (monster.isBoss) {
 damage = Math.max(1, Math.floor(damage / 10));
@@ -3046,6 +3189,9 @@ playerElement.classList.remove('is-walking');
 return;
 }
 playerElement.classList.add('is-walking');
+
+audioManager.playSoundThrottled('player_walk', 300);
+
 const length = Math.sqrt(dx * dx + dy * dy);
 if (length > 0) {
 dx /= length;
