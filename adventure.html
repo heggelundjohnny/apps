@@ -606,21 +606,15 @@ const audioManager = {
     isInitialized: false,
     mainGain: null,
     activeAmbiance: {}, // For å holde styr på loops (f.eks. vind)
-    birdChirpTimer: null, // NY EGENSKAP (Denne var på feil sted)
+    birdChirpTimer: null,
 
-    /**
-     * VIKTIG: Denne MÅ kalles etter at brukeren har interagert
-     * (klikket eller trykket en tast) for at lyd skal fungere i moderne nettlesere.
-     */
     init: function() {
         if (this.isInitialized) return;
-        
         try {
             this.context = new (window.AudioContext || window.webkitAudioContext)();
             this.mainGain = this.context.createGain();
             this.mainGain.connect(this.context.destination);
             this.mainGain.gain.setValueAtTime(1.0, this.context.currentTime); // Globalt volum 100%
-            
             this.isInitialized = true;
             console.log("Audio Context er initialisert.");
         } catch (e) {
@@ -628,257 +622,251 @@ const audioManager = {
         }
     },
 
-    /**
-     * Lydbiblioteket. Hver funksjon er en "oppskrift" på en lyd.
-     * De tar inn (ctx, dest) = AudioContext og destinasjonen (vår mainGain).
-     */
     sounds: {
-        /**
-         * En kort "hugg"-lyd for trær.
-         */
         'tree_chop': (ctx, dest) => {
-            const bufferSize = ctx.sampleRate * 0.1; // 0.1 sekund
+            const bufferSize = ctx.sampleRate * 0.1;
             const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
             const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1; // Hvit støy
-            }
-
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
             const noise = ctx.createBufferSource();
             noise.buffer = buffer;
-
             const filter = ctx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(1000, ctx.currentTime);
-
             const gain = ctx.createGain();
             gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1); // Rask fade-out
-
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
             noise.connect(filter).connect(gain).connect(dest);
             noise.start(ctx.currentTime);
             noise.stop(ctx.currentTime + 0.1);
         },
-
-        /**
-         * En positiv "pling" for å plukke opp ting.
-         */
         'item_pickup': (ctx, dest) => {
             const osc = ctx.createOscillator();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(600, ctx.currentTime);
             osc.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.1);
-
             const gain = ctx.createGain();
             gain.gain.setValueAtTime(0.2, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-
             osc.connect(gain).connect(dest);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.1);
         },
-
-        /**
-         * Atmosfærisk vind.
-         */
         'wind_ambiance': (ctx, dest) => {
-            const bufferSize = 2 * ctx.sampleRate; // 2 sekunder med støy
+            const bufferSize = 2 * ctx.sampleRate;
             const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
             const output = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) {
-                output[i] = (Math.random() * 2 - 1) * 0.3; // Brun støy (simulert)
+                output[i] = (Math.random() * 2 - 1) * 0.3;
                 if (i > 0) output[i] = (output[i-1] + (0.02 * output[i])) / 1.02;
             }
-
             const noiseNode = ctx.createBufferSource();
             noiseNode.buffer = buffer;
             noiseNode.loop = true;
-
             const filter = ctx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(300, ctx.currentTime); // Base "hush"
-            filter.Q.setValueAtTime(10, ctx.currentTime);
-
-            const lfo = ctx.createOscillator(); // Den som lager "whoosh"-effekten
+            filter.frequency.setValueAtTime(300, ctx.currentTime);
+            filter.Q.setValueAtTime(1, ctx.currentTime);
+            const lfo = ctx.createOscillator();
             lfo.type = 'sine';
-            lfo.frequency.setValueAtTime(0.1, ctx.currentTime); // Veldig treg "whoosh"
-
+            lfo.frequency.setValueAtTime(0.1, ctx.currentTime);
             const lfoGain = ctx.createGain();
-            lfoGain.gain.setValueAtTime(150, ctx.currentTime); // Hvor mye filteret skal endre seg
-
+            lfoGain.gain.setValueAtTime(150, ctx.currentTime);
             lfo.connect(lfoGain).connect(filter.frequency);
             noiseNode.connect(filter).connect(dest);
-
             lfo.start(ctx.currentTime);
             noiseNode.start(ctx.currentTime);
-
-            // Returner nodene slik at vi kan stoppe dem senere
             return { lfo, noiseNode };
-        }, // <-- SLUTT PÅ WIND_AMBIANCE, MEN IKKE PÅ SOUNDS-OBJEKTET
-
-        // *** FIKS 1: FUGLELYDENE SKAL INN HER ***
-        /**
-         * Fuglekvitter 1: En enkel "pew-pew"
-         */
-// ... i audioManager.sounds objektet ...
-
-        // NYE, FORBEDREDE FUGLELYDER:
-        /**
-         * Fuglekvitter 1: En kort "tweet"
-         */
+        },
         'bird_chirp_1': (ctx, dest) => {
             const t = ctx.currentTime;
             const osc = ctx.createOscillator();
-            osc.type = 'triangle'; // Mykere enn 'sine'
+            osc.type = 'triangle';
             osc.frequency.setValueAtTime(3500, t);
-            osc.frequency.linearRampToValueAtTime(2800, t + 0.08); // Rask frekvens-sveip nedover
-
+            osc.frequency.linearRampToValueAtTime(2800, t + 0.08);
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0, t); // Start på 0
-            gain.gain.linearRampToValueAtTime(0.08, t + 0.01); // Rask fade-in (mykt anslag)
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08); // Fade ut
-
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.08, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
             osc.connect(gain).connect(dest);
             osc.start(t);
             osc.stop(t + 0.08);
         },
-        
-        /**
-         * Fuglekvitter 2: En dobbel "ti-ti"
-         */
         'bird_chirp_2': (ctx, dest) => {
             const t = ctx.currentTime;
             const osc = ctx.createOscillator();
             osc.type = 'sine';
-            
-            // Første "ti"
             osc.frequency.setValueAtTime(3000, t);
             osc.frequency.linearRampToValueAtTime(3300, t + 0.05);
-            // Andre "ti"
             osc.frequency.linearRampToValueAtTime(3100, t + 0.06);
             osc.frequency.linearRampToValueAtTime(3400, t + 0.1);
-
             const gain = ctx.createGain();
             gain.gain.setValueAtTime(0, t);
             gain.gain.linearRampToValueAtTime(0.07, t + 0.01);
             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-
             osc.connect(gain).connect(dest);
             osc.start(t);
             osc.stop(t + 0.1);
         },
-
-        /**
-         * Fuglekvitter 3: En litt lenger "kvit-kvit-kvit" (trille)
-         */
         'bird_chirp_3': (ctx, dest) => {
             const t = ctx.currentTime;
             const osc = ctx.createOscillator();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(4000, t); // Høy start
-
-            // Rask vibrato (trille)
+            osc.frequency.setValueAtTime(4000, t);
             const lfo = ctx.createOscillator();
             lfo.type = 'sine';
-            lfo.frequency.setValueAtTime(30, t); // 30 Hz vibrato
-
+            lfo.frequency.setValueAtTime(30, t);
             const lfoGain = ctx.createGain();
-            lfoGain.gain.setValueAtTime(100, t); // Hvor mye frekvensen skal endre seg
-
-            lfo.connect(lfoGain).connect(osc.frequency); // Koble LFO til frekvensen
-
+            lfoGain.gain.setValueAtTime(100, t);
+            lfo.connect(lfoGain).connect(osc.frequency);
             const gain = ctx.createGain();
             gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.06, t + 0.02); // Litt lenger fade-in
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15); // Lenger lyd
-
+            gain.gain.linearRampToValueAtTime(0.06, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
             osc.connect(gain).connect(dest);
             lfo.start(t);
             osc.start(t);
             lfo.stop(t + 0.15);
             osc.stop(t + 0.15);
+        },
+        'player_attack_unarmed': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(180, t);
+            osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.4, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            osc.connect(gain).connect(dest);
+            osc.start(t);
+            osc.stop(t + 0.1);
+        },
+        
+        // NY LYD: 'player_attack_sword'
+        'player_attack_sword': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass'; // En "tynn" lyd
+            filter.frequency.setValueAtTime(1500, t);
+            filter.Q.setValueAtTime(10, t);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.3, t + 0.01); // Rask "swoosh"
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+            
+            noise.connect(filter).connect(gain).connect(dest);
+            noise.start(t);
+            noise.stop(t + 0.15);
+        },
+
+        // NY LYD: 'player_attack_sledge'
+        'player_attack_sledge': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(120, t); // Tyngre
+            osc.frequency.exponentialRampToValueAtTime(80, t + 0.15); // Faller mer
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.4, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15); // Lenger lyd
+
+            osc.connect(gain).connect(dest);
+            osc.start(t);
+            osc.stop(t + 0.15);
+        },
+
+        'monster_die_xp': (ctx, dest) => {
+            const t = ctx.currentTime;
+            const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            const noise = ctx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1000, t);
+            filter.frequency.exponentialRampToValueAtTime(200, t + 0.2);
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.3, t);
+            noiseGain.gain.linearRampToValueAtTime(0.001, t + 0.2);
+            noise.connect(filter).connect(noiseGain).connect(dest);
+            noise.start(t);
+            noise.stop(t + 0.2);
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, t + 0.1);
+            osc.frequency.linearRampToValueAtTime(1500, t + 0.2);
+            const xpGain = ctx.createGain();
+            xpGain.gain.setValueAtTime(0, t + 0.1);
+            xpGain.gain.linearRampToValueAtTime(0.2, t + 0.11);
+            xpGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+            osc.connect(xpGain).connect(dest);
+            osc.start(t + 0.1);
+            osc.stop(t + 0.2);
         }
-    }, // <-- *** DENNE LUKKER 'sounds'-OBJEKTET NÅ ***
+    },
 
-
-    /**
-     * Spiller en kort "one-shot" lydeffekt.
-     */
     playSound: function(name) {
         if (!this.isInitialized) this.init(); 
         if (!this.isInitialized || !this.sounds[name]) return;
-
         this.sounds[name](this.context, this.mainGain);
     },
 
-    /**
-     * Starter en loopende atmosfære-lyd.
-     */
     startAmbiance: function(name) {
         if (!this.isInitialized) this.init();
         if (!this.isInitialized || !this.sounds[name] || this.activeAmbiance[name]) return;
-
         console.log('Starter atmosfære:', name);
         const gain = this.context.createGain();
         gain.connect(this.mainGain);
         gain.gain.setValueAtTime(0, this.context.currentTime);
-        gain.gain.linearRampToValueAtTime(0.4, this.context.currentTime + 3); // Fade inn
-
+        gain.gain.linearRampToValueAtTime(0.4, this.context.currentTime + 3);
         const nodes = this.sounds[name](this.context, gain);
         this.activeAmbiance[name] = { ...nodes, gainNode: gain };
     },
 
-    /**
-     * Stopper en loopende atmosfære-lyd.
-     */
     stopAmbiance: function(name) {
         if (!this.isInitialized || !this.activeAmbiance[name]) return;
-        
         console.log('Stopper atmosfære:', name);
         const nodes = this.activeAmbiance[name];
-
         const fadeTime = this.context.currentTime + 2;
         nodes.gainNode.gain.cancelScheduledValues(this.context.currentTime);
         nodes.gainNode.gain.linearRampToValueAtTime(0.001, fadeTime);
-
         setTimeout(() => {
             if (nodes.noiseNode) nodes.noiseNode.stop();
             if (nodes.lfo) nodes.lfo.stop();
             nodes.gainNode.disconnect();
         }, 2100);
-
         delete this.activeAmbiance[name];
-    }, // <-- SLUTT PÅ STOPAMBIANCE, MEN IKKE PÅ AUDIOMANAGER
+    },
 
-    // *** FIKS 2: FUGLE-FUNKSJONENE SKAL INN HER ***
-    /**
-     * Starter den tilfeldige avspillingen av fuglelyder.
-     */
     startBirdSounds: function() {
         if (!this.isInitialized || this.birdChirpTimer) return; 
-
         console.log("Starter fuglelyder...");
         const birdSounds = ['bird_chirp_1', 'bird_chirp_2', 'bird_chirp_3'];
-        
         const loop = () => {
             const randomDelay = Math.random() * 10000 + 5000; 
-            
             this.birdChirpTimer = setTimeout(() => {
                 if (!this.isInitialized) return;
-
                 const soundName = birdSounds[Math.floor(Math.random() * birdSounds.length)];
                 this.playSound(soundName);
-                
                 loop(); 
             }, randomDelay);
         };
-        
         loop(); 
     },
 
-    /**
-     * Stopper avspillingen av fuglelyder.
-     */
     stopBirdSounds: function() {
         if (this.birdChirpTimer) {
             console.log("Stopper fuglelyder...");
@@ -886,7 +874,7 @@ const audioManager = {
             this.birdChirpTimer = null;
         }
     }
-}; // <-- *** DENNE LUKKER 'audioManager'-OBJEKTET NÅ ***
+};
 
 document.addEventListener('DOMContentLoaded', () => {
 const WORLD_SIZE = {
@@ -2131,65 +2119,129 @@ playerElement.style.transform = `translate(${screenCenterX - cellSize / 2}px, ${
 renderVisibleMonsters();
 renderVisibleNPCs();
 }
+
+
 function renderVisibleMonsters() {
-if (!gameState.player || !mapGrid) return;
-const pPos = gameState.player.pos;
-const renderDistX = Math.ceil(gameContainer.clientWidth / cellSize / 2) + 4;
-const renderDistY = Math.ceil(gameContainer.clientHeight / cellSize / 2) + 4;
-const newVisibleMonsters = {};
-for (const monster of gameState.monsters) {
-const isVisible = Math.abs(monster.x - pPos.x) < renderDistX && Math.abs(monster.y - pPos.y) < renderDistY;
-if (isVisible) {
-newVisibleMonsters[monster.id] = true;
-let monsterEl = visibleMonsterElements[monster.id];
-if (!monsterEl) {
-monsterEl = document.createElement('div');
-monsterEl.className = 'monster-container';
-const sprite = document.createElement('div');
-sprite.className = 'monster-sprite';
-sprite.textContent = monster.tile;
-if (OBJECT_DATA[monster.tile].type === 'boss') {
-sprite.classList.add('large');
-} else {
-sprite.classList.add('medium');
+    if (!gameState.player || !mapGrid) return;
+    const pPos = gameState.player.pos;
+    const renderDistX = Math.ceil(gameContainer.clientWidth / cellSize / 2) + 4;
+    const renderDistY = Math.ceil(gameContainer.clientHeight / cellSize / 2) + 4;
+    const newVisibleMonsters = {};
+    for (const monster of gameState.monsters) {
+        const isVisible = Math.abs(monster.x - pPos.x) < renderDistX && Math.abs(monster.y - pPos.y) < renderDistY;
+        if (isVisible) {
+            newVisibleMonsters[monster.id] = true;
+            let monsterEl = visibleMonsterElements[monster.id];
+            if (!monsterEl) {
+                monsterEl = document.createElement('div');
+                monsterEl.className = 'monster-container';
+                const sprite = document.createElement('div');
+                sprite.className = 'monster-sprite';
+                sprite.textContent = monster.tile;
+                if (OBJECT_DATA[monster.tile].type === 'boss') {
+                    sprite.classList.add('large');
+                } else {
+                    sprite.classList.add('medium');
+                }
+                monsterEl.appendChild(sprite);
+                mapGrid.appendChild(monsterEl);
+                visibleMonsterElements[monster.id] = monsterEl;
+
+                // --- START PÅ OPPDATERT KLIKK-LOGIKK ---
+                monsterEl.addEventListener('click', () => {
+                    if (gameState.isGameOver || monster.isDying || monster.tile === TILE.GHOST || monster.tile === TILE.SWAN) return;
+
+                    // --- BLOKK 1: HÅNDTERER SLAG NÅR DU ALLEREDE ER I KAMP ---
+                    if (gameState.isFighting && gameState.activeFighter.id === monster.id) {
+                        
+                        const equippedWeapon = WEAPONS[gameState.player.equippedWeapon];
+
+                        // --- NY LOGIKK: Sjekk våpentype ---
+                        let weaponForThisHit = equippedWeapon;
+                        if (weaponForThisHit.type === 'ranged') {
+                            weaponForThisHit = WEAPONS['unarmed']; // Bytt til never
+                        }
+                        // --- SLUTT PÅ NY LOGIKK ---
+                        
+                        // Sjekk lyder basert på våpenet vi endte opp med:
+                        if (weaponForThisHit.name === 'Unarmed') {
+                            audioManager.playSound('player_attack_unarmed');
+                        } else if (weaponForThisHit.name === 'Stone Sword') {
+                            audioManager.playSound('player_attack_sword');
+                        } else if (weaponForThisHit.name === 'Stone Sledgehammer') {
+                            audioManager.playSound('player_attack_sledge');
+                        }
+
+                        // Gjør skade (også basert på 'weaponForThisHit')
+                        const damageBonus = weaponForThisHit.damageBonus;
+                        const baseDamage = gameState.player.strength + Math.floor(Math.random() * 3) - 1;
+                        const playerDamage = Math.floor(baseDamage * damageBonus);
+                        gameState.activeFighter.currentHp -= playerDamage;
+                        updateHealthBar(monsterEl, gameState.activeFighter.currentHp, gameState.activeFighter.baseHp);
+                        
+                        if (gameState.activeFighter.currentHp <= 0) {
+                            endFight('win');
+                        }
+
+                    // --- BLOKK 2: HÅNDTERER DET FØRSTE KLIKKET FOR Å STARTE KAMP ---
+                    } else if (!gameState.isFighting) {
+                        const isAdjacent = Math.abs(monster.x - gameState.player.pos.x) <= 1 && Math.abs(monster.y - gameState.player.pos.y) <= 1;
+                        if (isAdjacent) {
+                            
+                            startFight(monster); // Start kampen
+                            
+                            const equippedWeapon = WEAPONS[gameState.player.equippedWeapon];
+
+                            // --- NY LOGIKK: Sjekk våpentype ---
+                            let weaponForThisHit = equippedWeapon;
+                            if (weaponForThisHit.type === 'ranged') {
+                                weaponForThisHit = WEAPONS['unarmed']; // Bytt til never
+                            }
+                            // --- SLUTT PÅ NY LOGIKK ---
+                            
+                            // Spill lyden for første slag
+                            if (weaponForThisHit.name === 'Unarmed') {
+                                audioManager.playSound('player_attack_unarmed');
+                            } else if (weaponForThisHit.name === 'Stone Sword') {
+                                audioManager.playSound('player_attack_sword');
+                            } else if (weaponForThisHit.name === 'Stone Sledgehammer') {
+                                audioManager.playSound('player_attack_sledge');
+                            }
+
+                            // Gjør skaden for første slag
+                            const damageBonus = weaponForThisHit.damageBonus;
+                            const baseDamage = gameState.player.strength + Math.floor(Math.random() * 3) - 1;
+                            const playerDamage = Math.floor(baseDamage * damageBonus);
+                            
+                            if (gameState.activeFighter) { 
+                                gameState.activeFighter.currentHp -= playerDamage;
+                                updateHealthBar(monsterEl, gameState.activeFighter.currentHp, gameState.activeFighter.baseHp);
+                                
+                                if (gameState.activeFighter.currentHp <= 0) {
+                                    endFight('win');
+                                }
+                            }
+                        }
+                    }
+                });
+                // --- SLUTT PÅ OPPDATERT KLIKK-LOGIKK ---
+            }
+            
+            if (monster.pixelPos) {
+                const elX = monster.pixelPos.x - cellSize / 2;
+                const elY = monster.pixelPos.y - cellSize / 2;
+                monsterEl.style.transform = `translate(${elX}px, ${elY}px)`;
+            }
+        }
+    }
+    for (const monsterId in visibleMonsterElements) {
+        if (!newVisibleMonsters[monsterId]) {
+            visibleMonsterElements[monsterId].remove();
+            delete visibleMonsterElements[monsterId];
+        }
+    }
 }
-monsterEl.appendChild(sprite);
-mapGrid.appendChild(monsterEl);
-visibleMonsterElements[monster.id] = monsterEl;
-monsterEl.addEventListener('click', () => {
-if (gameState.isGameOver || monster.isDying || monster.tile === TILE.GHOST || monster.tile === TILE.SWAN) return;
-if (gameState.isFighting && gameState.activeFighter.id === monster.id) {
-const equippedWeapon = WEAPONS[gameState.player.equippedWeapon];
-const damageBonus = (equippedWeapon && equippedWeapon.type === 'melee') ? equippedWeapon.damageBonus : 1.0;
-const baseDamage = gameState.player.strength + Math.floor(Math.random() * 3) - 1;
-const playerDamage = Math.floor(baseDamage * damageBonus);
-gameState.activeFighter.currentHp -= playerDamage;
-updateHealthBar(monsterEl, gameState.activeFighter.currentHp, gameState.activeFighter.baseHp);
-if (gameState.activeFighter.currentHp <= 0) {
-endFight('win');
-}
-} else if (!gameState.isFighting) {
-const isAdjacent = Math.abs(monster.x - gameState.player.pos.x) <= 1 && Math.abs(monster.y - gameState.player.pos.y) <= 1;
-if (isAdjacent) {
-startFight(monster);
-}
-}
-});
-}
-if (monster.pixelPos) {
-const elX = monster.pixelPos.x - cellSize / 2;
-const elY = monster.pixelPos.y - cellSize / 2;
-monsterEl.style.transform = `translate(${elX}px, ${elY}px)`;
-}
-}
-}
-for (const monsterId in visibleMonsterElements) {
-if (!newVisibleMonsters[monsterId]) {
-visibleMonsterElements[monsterId].remove();
-delete visibleMonsterElements[monsterId];
-}
-}
-}
+
 function renderVisibleNPCs() {
 if (!gameState.player || !mapGrid) return;
 const pPos = gameState.player.pos;
@@ -2590,6 +2642,9 @@ updateHUD();
 }
 
 function killMonster(monster) {
+
+audioManager.playSound('monster_die_xp');
+
 monster.isDying = true;
 const reward = OBJECT_DATA[monster.tile].xpReward || 0;
 showMessage(`Defeated ${monster.tile}! +${reward} XP ⭐`);
