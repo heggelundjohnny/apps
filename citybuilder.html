@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>City Builder 2</title>
+<title>Chromebook City Builder</title>
 <meta name="robots" content="noindex">
 <style>
 html {
@@ -1165,7 +1165,7 @@ if (!modal) return;
 const modalContent = modal.querySelector('.modal-content');
 if (!modalContent) return;
 modalContent.innerHTML = `<span class="modal-close">&times;</span>
-<h2>How to Play City Builder 2</h2>
+<h2>How to Play Chromebook City Builder</h2>
 <p>Welcome, Mayor! Your main goal is to build a thriving metropolis and reach a population of <strong>${config.WIN_CONDITION_POPULATION.toLocaleString()}</strong> residents. But be careful – if your city's budget drops below zero, you'll go bankrupt and the game is over!</p>
 <h4>The Basics 💵</h4>
 <ul>
@@ -1790,6 +1790,7 @@ gameState.taxRate = 0.7;
 document.querySelectorAll('.tax-btn').forEach(btn => btn.classList.remove('active'));
 const defaultTaxBtn = document.querySelector('.tax-btn[data-rate="0.7"]');
 if (defaultTaxBtn) defaultTaxBtn.classList.add('active');
+showHelp();
 }
 setupEventListeners();
 createClouds();
