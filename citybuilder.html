@@ -905,7 +905,7 @@ ctx.fillStyle = colors[cell.base] || colors.grass;
 ctx.fillRect(drawX, drawY, config.cellSize, config.cellSize);
 const pollution = pollutionGrid[index];
 if (pollution > 20) {
-ctx.fillStyle = `rgba(139, 69, 19, ${pollution / 300})`;
+ctx.fillStyle = `rgba(139, 69, 19, ${pollution / 600})`;
 ctx.fillRect(drawX, drawY, config.cellSize, config.cellSize);
 }
 if (cell.base === 'road' && cell.roadWear > 0) {
