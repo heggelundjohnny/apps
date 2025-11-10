@@ -1,6 +1,6 @@
 # Browser Apps for Chromebook Users
 
-To **see** an updated list with direct links [Click here](https://hubjohnny.github.io/)
+To **see** an updated list with direct links [Click here](https://chromebookapps.github.io/)
 
 ---
 
