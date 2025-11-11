@@ -1,5 +1,4 @@
 # Browser Apps for PC Users
----
 
 ## ⚖️ License
 This entire collection of browser games and tools is licensed under the **MIT License**.
