@@ -2676,7 +2676,7 @@ const item = OBJECT_DATA[tile];
 if (item && item.type === 'food') {
 if (gameState.player.hp < gameState.player.maxHp) {
 gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + item.hpGain);
-updateCell(x, y, gameState.world[y][x]);
+updateCell(x, y, TILE.EMPTY);
 updateHUD();
 showPlayerStatusBar();
 audioManager.playSound('item_pickup');
